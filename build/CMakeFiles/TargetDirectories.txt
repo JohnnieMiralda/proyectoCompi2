@@ -1,0 +1,3 @@
+/mnt/c/Users/johnn/OneDrive - Universidad Tecnologica Centroamericana/q4 2021/compiladores 2/proyecto/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/johnn/OneDrive - Universidad Tecnologica Centroamericana/q4 2021/compiladores 2/proyecto/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/johnn/OneDrive - Universidad Tecnologica Centroamericana/q4 2021/compiladores 2/proyecto/build/CMakeFiles/minigo_lexer.dir
