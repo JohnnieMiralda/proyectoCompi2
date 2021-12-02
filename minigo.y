@@ -5,7 +5,7 @@
     int yylex();
     extern int yylineno;
     void yyerror(const char * s){
-        fprintf(stderr, "Line: %d, error: %s\n", yylineno, s);
+        fprintf(stderr, "Line: %d, error: %s \n", yylineno, s);
     }
 
     #define YYERROR_VERBOSE 1
@@ -59,16 +59,18 @@
 %token MAIN_TK
 %%
 
-start: PACK_TK MAIN_TK IMPOR_TK '(' import_loop 
-    |  PACK_TK MAIN_TK IMPOR_TK LIT_STRING_TK body {printf("sintaxis correcta\n");}
+start: PACK_TK MAIN_TK import_loop body {printf("sintaxis correcta\n");}
     ;
 
-import_loop: LIT_STRING_TK import_loop
-    | ')'body
+import_loop: IMPOR_TK '(' import_loop
+    | LIT_STRING_TK ')'
+    | IMPOR_TK LIT_STRING_TK
+    | LIT_STRING_TK import_loop
     ;
 
 body: FUNC_TK MAIN_TK '('')'  block_statements  body
     | FUNC_TK ID_TK '(' param_list ')' type  block_statements body
+    | FUNC_TK ID_TK '(' param_list ')' '[' ']' type  block_statements body
     | asignation_statement body
     |
     ;
@@ -81,15 +83,22 @@ statement: asignation_statement
     | if_statement
     | block_statements
     | jump_statement
+    | FOR_TK for_statement
     | ID_TK '.' ID_TK unary_expression
     | expression
+    | BREAK_TK
+    | CONT_TK
     ;
+
+for_statement:  expression statement
+    | statement
+    |  assignment_expression ';' expression ';' additive_expression statement
 
 asignation_statement: VAR_TK assignment_expression
     | assignment_expression
     ;
 
-if_statement: IF_TK unary_expression  statement 
+if_statement: IF_TK expression  statement 
     | IF_TK  expression  statement  ELSE_TK  statement 
     ;
 
@@ -107,6 +116,8 @@ type: INT_TK
 
 param_list: ID_TK type ',' param_list
     | ID_TK type
+    | ID_TK '['']'type ',' param_list
+    | ID_TK '['']'type
     |
     ;
 
@@ -132,6 +143,7 @@ equality_expression:  equality_expression EQUALS_TK relational_expression
     ;
 
 postfix_expression: primary_expression 
+    | primary_expression '.' primary_expression '(' argument_expression_list ')'
     | postfix_expression '[' expression ']' 
     | postfix_expression '(' ')' 
     | postfix_expression '(' argument_expression_list ')' 
@@ -150,6 +162,7 @@ primary_expression: '('expression ')'
 
 argument_expression_list: argument_expression_list ',' assignment_expression 
     | assignment_expression
+    | 
     ;
 
 assignment_operator: '=' 

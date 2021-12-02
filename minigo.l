@@ -33,12 +33,6 @@
 "bool" {return BOOL_TK;}
 "string" {return STRING_TK;}
 "float" {return FLOAT_TK;}
-
-[\".*\"] { yylval.string_t = strdup(yytext); return LIT_STRING_TK;}
-[0-9]+ {yylval.int_t = atoi(yytext); return LIT_INT_TK;}
-[0-9]+"."[0-9]+ {yylval.float_t = atof(yytext); return LIT_FLOAT_TK;}
-[a-zA-Z]+[a-zA-Z0-9]* {yylval.string_t = strdup(yytext); return ID_TK;}
-
 "++" { return PLUS_PLUS_TK;}
 "+=" { return PLUS_EQUAL_TK;}
 "+" { return '+';}
@@ -91,7 +85,14 @@
 "." { return '.';}
 "," { return ',';}
 ";" { return ';';}
-[\n ]+ ;
+
+\".*\" { yylval.string_t = strdup(yytext); return LIT_STRING_TK;}
+[0-9]+ {yylval.int_t = atoi(yytext); return LIT_INT_TK;}
+[0-9]+"."[0-9]+ {yylval.float_t = atof(yytext); return LIT_FLOAT_TK;}
+[a-zA-Z]+[a-zA-Z0-9]* {yylval.string_t = strdup(yytext); return ID_TK;}
+
+
+[\n]+ ;
 [ ] ;
 . ;
 <CommentBlock>"*/" {BEGIN(INITIAL);}
