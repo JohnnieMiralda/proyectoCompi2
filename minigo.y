@@ -84,22 +84,32 @@ statement: asignation_statement
     | block_statements
     | jump_statement
     | FOR_TK for_statement
-    | ID_TK '.' ID_TK unary_expression
+    | methodcall
     | expression
     | BREAK_TK
     | CONT_TK
     ;
 
+methodcall: ID_TK '.' ID_TK '('')'
+    | ID_TK '.' ID_TK '(' expression_list ')'
+    ;
+
+expression_list: expression_list ',' unary_expression
+    | unary_expression
+
 for_statement:  expression statement
     | statement
-    |  assignment_expression ';' expression ';' additive_expression statement
+    | assignment_expression ';' expression ';' additive_expression statement
 
 asignation_statement: VAR_TK assignment_expression
     | assignment_expression
     ;
 
-if_statement: IF_TK expression  statement 
-    | IF_TK  expression  statement  ELSE_TK  statement 
+if_statement: IF_TK expression  '{' statement_list '}' else_statement
+    ;
+
+else_statement: ELSE_TK statement
+    |
     ;
 
 block_statements: '{' statement_list '}'
@@ -112,16 +122,17 @@ type: INT_TK
     |BOOL_TK
     |STRING_TK
     |FLOAT_TK
-    ;
-
-param_list: ID_TK type ',' param_list
-    | ID_TK type
-    | ID_TK '['']'type ',' param_list
-    | ID_TK '['']'type
     |
     ;
 
-assignment_expression: unary_expression assignment_operator assignment_expression
+param_list: param_list ',' ID_TK type
+    | param_list ',' ID_TK '['']'type 
+    | ID_TK type
+    | ID_TK '['']'type
+    | 
+    ;
+
+assignment_expression: unary_expression type assignment_operator assignment_expression
     | logical_or_expression 
     ;
 
@@ -133,49 +144,9 @@ logical_and_expression: logical_and_expression AND_TK equality_expression
     | equality_expression 
     ;
 
-unary_expression: '!' unary_expression  
-    | postfix_expression
-    ;
-
 equality_expression:  equality_expression EQUALS_TK relational_expression 
     | equality_expression NOT_EQUAL_TK relational_expression 
     | relational_expression 
-    ;
-
-postfix_expression: primary_expression 
-    | primary_expression '.' primary_expression '(' argument_expression_list ')'
-    | postfix_expression '[' expression ']' 
-    | postfix_expression '(' ')' 
-    | postfix_expression '(' argument_expression_list ')' 
-    | postfix_expression PLUS_PLUS_TK
-    | postfix_expression MINUS_EQUAL_TK
-    ;
-
-primary_expression: '('expression ')'
-    | ID_TK 
-    | LIT_STRING_TK
-    | LIT_INT_TK
-    | LIT_FLOAT_TK
-    | TRUE_TK
-    | FALSE_TK
-    ;
-
-argument_expression_list: argument_expression_list ',' assignment_expression 
-    | assignment_expression
-    | 
-    ;
-
-assignment_operator: '=' 
-    | PLUS_EQUAL_TK
-    | MINUS_EQUAL_TK 
-    | MULT_EQUAL_TK 
-    | SLASH_EQUAL_TK 
-    | PORC_EQUAL_TK 
-    | TRAN_EQUAL_TK 
-    | COLON_EQUAL_TK
-    ;
-
-expression: assignment_expression
     ;
 
 relational_expression: relational_expression '<' additive_expression
@@ -196,5 +167,51 @@ multiplicative_expression: multiplicative_expression '*' unary_expression
     | multiplicative_expression '%' unary_expression
     | unary_expression
     ;
+
+unary_expression: '!' unary_expression  
+    | postfix_expression
+    ;
+
+
+postfix_expression: primary_expression 
+    | primary_expression '.' primary_expression '(' argument_expression_list ')'
+    | postfix_expression '[' expression ']' 
+    | postfix_expression '(' ')' 
+    | postfix_expression '(' argument_expression_list ')' 
+    | postfix_expression PLUS_PLUS_TK
+    | postfix_expression MINUS_EQUAL_TK
+    ;
+
+primary_expression: '('expression ')'
+    | ID_TK 
+    | LIT_STRING_TK
+    | LIT_INT_TK
+    | LIT_FLOAT_TK
+    | TRUE_TK
+    | FALSE_TK
+    | '['']' type '{' expression_list '}' ';'
+    ;
+
+argument_expression_list: argument_expression_list ',' assignment_expression 
+    | assignment_expression
+    | 
+    ;
+
+assignment_operator: '=' 
+    | PLUS_EQUAL_TK
+    | MINUS_EQUAL_TK 
+    | MULT_EQUAL_TK 
+    | SLASH_EQUAL_TK 
+    | PORC_EQUAL_TK 
+    | TRAN_EQUAL_TK 
+    | COLON_EQUAL_TK
+    ;
+
+expression: assignment_expression
+    ;
+
+
+
+
 
 
