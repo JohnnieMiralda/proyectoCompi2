@@ -259,11 +259,3 @@ assignment_operator: '=' { $$ = EQUAL; }
     | PORC_EQUAL_TK { $$ = PORCEQUAL; }
     | TRAN_EQUAL_TK { $$ = TRANEQUAL; }
     ;
-
-
-
-
-
-
-
-
