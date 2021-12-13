@@ -48,8 +48,9 @@ map<string, Type> resultTypes ={
 };
 
 const char * intTemps[] = {"$t0","$t1", "$t2","$t3","$t4","$t5","$t6","$t7","$t8","$t9" };
-const char * floatTemps[] = {"$f0","$f1","$f2","$f3","$f4","$f5","$f6","$f7","$f8","$f9","$f10","$f11","$f12","$f13","$f14","$f15","$f16","$f17","$f18","$f19","$f20","$f21","$f22","$f23","$f24","$f25","$f26","$f27","$f28","$f29","$f30","$f31"
-                        };
+const char * floatTemps[] = {"$f0","$f1","$f2","$f3","$f4","$f5","$f6","$f7","$f8","$f9","$f10","$f11",
+                            "$f12","$f13","$f14","$f15","$f16","$f17","$f18","$f19","$f20","$f21","$f22",
+                            "$f23","$f24","$f25","$f26","$f27","$f28","$f29","$f30","$f31"};
 
 #define INT_TEMP_COUNT 10
 #define FLOAT_TEMP_COUNT 32
@@ -624,16 +625,33 @@ Type PostIncrementExpr::getType(){
     return this->expr->getType();
 }
 
-void PostIncrementExpr::genCode(Code &code){
-    
+string PostIncrementExpr::genCode(){
+    return "";
 }
 
+int PostIncrementExpr::evaluateSemantic(){
+    Type exprType = this->expr->getType();
+        if(exprType != FLOAT && exprType != INT){
+            cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to line: "<<this->line <<endl;
+            exit(0);
+        }
+    return 0;
+}
+
+int PostDecrementExpr::evaluateSemantic(){
+    Type exprType = this->expr->getType();
+        if(exprType != FLOAT && exprType != INT){
+            cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to line: "<<this->line <<endl;
+            exit(0);
+        }
+    return 0;
+}
 Type PostDecrementExpr::getType(){
     return this->expr->getType();
 }
 
-void PostDecrementExpr::genCode(Code &code){
-
+string PostDecrementExpr::genCode(){
+    return "";
 }
 
 Type StringExpr::getType(){
@@ -644,7 +662,7 @@ void StringExpr::genCode(Code &code){
     string strLabel = getNewLabel("string");
     stringstream ss;
     ss << strLabel <<": .asciiz" << this->value << ""<<endl;
-    assemblyFile.data += ss.str(); 
+    // assemblyFile.data += ss.str(); 
     code.code = "";
     code.place = strLabel;
     code.type = STRING;
@@ -670,7 +688,7 @@ int Declarator::evaluateSemantic(){
 }
 
 string Declarator::genCode(){
-    
+    return "";
 }
 
 int ForStatement::evaluateSemantic(){
@@ -700,6 +718,11 @@ int AsignationStatement::evaluateSemantic(){
         cout<<"error: variable: "<< " line: "<<this->id->line <<endl;
         exit(0);
     }
+    return 0;
+}
+
+string AsignationStatement::genCode(){
+    return "";
 }
 
 string ForStatement::genCode(){
@@ -815,30 +838,30 @@ string ReturnStatement::genCode(){
     return ss.str();
 }
 
-int PrintStatement::evaluateSemantic(){
-    return this->expr->getType();
-}
+// int PrintStatement::evaluateSemantic(){
+//     return this->expr->getType();
+// }
 
-string PrintStatement::genCode(){
-    Code exprCode;
-    this->expr->genCode(exprCode);
-    stringstream code;
-    code<< exprCode.code<<endl;
-    if(exprCode.type == INT){
-        code <<"move $a0, "<< exprCode.place<<endl
-        << "li $v0, 1"<<endl
-        << "syscall"<<endl;
-    }else if(exprCode.type == FLOAT){
-        code << "mov.s $f12, "<< exprCode.place<<endl
-        << "li $v0, 2"<<endl
-        << "syscall"<<endl;
-    }else if(exprCode.type == STRING){
-        code << "la $a0, "<< exprCode.place<<endl
-        << "li $v0, 4"<<endl
-        << "syscall"<<endl;
-    }
-    return code.str();
-}
+// string PrintStatement::genCode(){
+//     Code exprCode;
+//     this->expr->genCode(exprCode);
+//     stringstream code;
+//     code<< exprCode.code<<endl;
+//     if(exprCode.type == INT){
+//         code <<"move $a0, "<< exprCode.place<<endl
+//         << "li $v0, 1"<<endl
+//         << "syscall"<<endl;
+//     }else if(exprCode.type == FLOAT){
+//         code << "mov.s $f12, "<< exprCode.place<<endl
+//         << "li $v0, 2"<<endl
+//         << "syscall"<<endl;
+//     }else if(exprCode.type == STRING){
+//         code << "la $a0, "<< exprCode.place<<endl
+//         << "li $v0, 4"<<endl
+//         << "syscall"<<endl;
+//     }
+//     return code.str();
+// }
 
 void EqExpr::genCode(Code &code){
     Code leftSideCode; 
@@ -1001,26 +1024,28 @@ void AssignExpr::genCode(Code &code){
     code.code = ss.str();
 }
 
-void PlusAssignExpr::genCode(Code &code){
+// void PlusAssignExpr::genCode(Code &code){
     
-}
+// }
 
-void MinusAssignExpr::genCode(Code &code){
+// void MinusAssignExpr::genCode(Code &code){
     
-}
+// }
 
 IMPLEMENT_BINARY_GET_TYPE(Add);
 IMPLEMENT_BINARY_GET_TYPE(Sub);
 IMPLEMENT_BINARY_GET_TYPE(Mul);
 IMPLEMENT_BINARY_GET_TYPE(Div);
-IMPLEMENT_BINARY_GET_TYPE(Assign);
-IMPLEMENT_BINARY_GET_TYPE(PlusAssign);
-IMPLEMENT_BINARY_GET_TYPE(MinusAssign);
+IMPLEMENT_BINARY_GET_TYPE(Mod);
+// IMPLEMENT_BINARY_GET_TYPE(Assign);
+// IMPLEMENT_BINARY_GET_TYPE(PlusAssign);
+// IMPLEMENT_BINARY_GET_TYPE(MinusAssign);
 
 IMPLEMENT_BINARY_ARIT_GEN_CODE(Add, '+');
 IMPLEMENT_BINARY_ARIT_GEN_CODE(Sub, '-');
 IMPLEMENT_BINARY_ARIT_GEN_CODE(Mul, '*');
 IMPLEMENT_BINARY_ARIT_GEN_CODE(Div, '/');
+IMPLEMENT_BINARY_ARIT_GEN_CODE(Mod, '%');
 
 IMPLEMENT_BINARY_BOOLEAN_GET_TYPE(Eq);
 IMPLEMENT_BINARY_BOOLEAN_GET_TYPE(Neq);

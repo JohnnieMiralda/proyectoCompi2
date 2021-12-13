@@ -10,7 +10,7 @@
 using namespace std;
 
 class Expr;
-typedef list<Expr *> ArgumentList;
+typedef list<Expr *> ExpressionList;
 typedef list<Expr *> InitializerElementList;
 
 class Statement;
@@ -32,6 +32,9 @@ enum StatementKind{
     IF_ST,
     ELSE_ST,
 
+    POST_DECREMENT_ST,
+    POST_INCREMENT_ST,
+    DECLARATION_ST,
     EXPRESSION_ST,
     ASSIGNATION_ST,
     BLOCK_ST,
@@ -58,10 +61,27 @@ class Statement{
         virtual StatementKind getKind() = 0;
         virtual string genCode() = 0;
 };
-
-class AsignationStatement{
+class Expr{
     public:
-        AsignationStatement(IdExpr * id, int operador, Expr * expr){
+        int line;
+        virtual Type getType() = 0;
+        virtual void genCode(Code &code) = 0;
+};
+class IdExpr : public Expr{
+    public:
+        IdExpr(string id, int line){
+            this->id = id;
+            this->line = line;
+        }
+        string id;
+        int line;
+        Type getType();
+        int evaluateSemantic();
+        void genCode(Code &code);
+};
+class AsignationStatement: public Statement{
+    public:
+        AsignationStatement(IdExpr* id, int operador, Expr * expr){
             this->id = id;
             this->operador= operador;
             this->expr= expr;
@@ -71,7 +91,7 @@ class AsignationStatement{
         Expr * expr;
         int evaluateSemantic();
         string genCode();
-        StatementKind getkind(){
+        StatementKind getKind(){
             return ASSIGNATION_ST;
         }
 };
@@ -112,15 +132,10 @@ class MethodDefinition : public Statement{
         int evaluateSemantic();
         string genCode();
         StatementKind getKind(){
-            return FUNCTION_DEFINITION_ST;
+            return DECLARATION_ST;
         }
 };
-class Expr{
-    public:
-        int line;
-        virtual Type getType() = 0;
-        virtual void genCode(Code &code) = 0;
-};
+
 
 class Initializer{
     public:
@@ -148,6 +163,9 @@ class Declarator: public Statement{
         int line;
         int evaluateSemantic();
         string genCode();
+        StatementKind getKind(){
+            return FUNCTION_DEFINITION_ST;
+        }
 };
 
 class Parameter{
@@ -166,13 +184,13 @@ class Parameter{
 
 
 
-class IdExpr : public Expr{
+class IntExpr : public Expr{
     public:
-        IdExpr(string id, int line){
-            this->id = id;
+        IntExpr(int value, int line){
+            this->value = value;
             this->line = line;
         }
-        string id;
+        int value;
         int line;
         Type getType();
         void genCode(Code &code);
@@ -209,17 +227,7 @@ class StringExpr : public Expr{
         void genCode(Code &code);
 };
 
-class IdExpr : public Expr{
-    public:
-        IdExpr(string id, int line){
-            this->id = id;
-            this->line = line;
-        }
-        string id;
-        int line;
-        Type getType();
-        void genCode(Code &code);
-};
+
 
 class UnaryExpr : public Expr{
     public:
@@ -235,7 +243,7 @@ class UnaryExpr : public Expr{
         void genCode(Code &code);
 };
 
-class PostIncrementExpr: public Expr{
+class PostIncrementExpr: public Statement{
     public:
         PostIncrementExpr(Expr * expr, int line){
             this->expr = expr;
@@ -244,10 +252,14 @@ class PostIncrementExpr: public Expr{
         Expr * expr;
         int line;
         Type getType();
-        void genCode(Code &code);
+        string genCode();
+        int evaluateSemantic();
+        StatementKind getKind(){
+            return POST_INCREMENT_ST;
+        }
 };
 
-class PostDecrementExpr: public Expr{
+class PostDecrementExpr: public Statement{
     public:
         PostDecrementExpr(Expr * expr, int line){
             this->expr = expr;
@@ -256,18 +268,22 @@ class PostDecrementExpr: public Expr{
         Expr * expr;
         int line;
         Type getType();
-        void genCode(Code &code);
+        string genCode();
+        int evaluateSemantic();
+        StatementKind getKind(){
+            return POST_DECREMENT_ST;
+        }
 };
 
 class MethodInvocationExpr : public Expr{
     public:
-        MethodInvocationExpr(IdExpr * id, ArgumentList args, int line){
+        MethodInvocationExpr(IdExpr * id, ExpressionList args, int line){
             this->id = id;
             this->args = args;
             this->line = line;
         }
         IdExpr * id;
-        ArgumentList args;
+        ExpressionList args;
         int line;
         Type getType();
         void genCode(Code &code);
