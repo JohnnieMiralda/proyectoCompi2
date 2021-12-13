@@ -22,8 +22,8 @@ typedef list<Parameter *> ParameterList;
 class InitDeclarator;
 typedef list<InitDeclarator *> InitDeclaratorList;
 
-class Declaration;
-typedef list<Declaration *> DeclarationList;
+class Declarator;
+typedef list<Declarator *> DeclarationList;
 
 
 enum StatementKind{
@@ -33,6 +33,7 @@ enum StatementKind{
     ELSE_ST,
 
     EXPRESSION_ST,
+    ASSIGNATION_ST,
     BLOCK_ST,
 
     RETURN_ST,
@@ -57,6 +58,24 @@ class Statement{
         virtual StatementKind getKind() = 0;
         virtual string genCode() = 0;
 };
+
+class AsignationStatement{
+    public:
+        AsignationStatement(IdExpr * id, int operador, Expr * expr){
+            this->id = id;
+            this->operador= operador;
+            this->expr= expr;
+        }
+        IdExpr * id;
+        int operador;
+        Expr * expr;
+        int evaluateSemantic();
+        string genCode();
+        StatementKind getkind(){
+            return ASSIGNATION_ST;
+        }
+};
+
 
 class BlockStatement : public Statement{
     public:
@@ -96,18 +115,24 @@ class MethodDefinition : public Statement{
             return FUNCTION_DEFINITION_ST;
         }
 };
+class Expr{
+    public:
+        int line;
+        virtual Type getType() = 0;
+        virtual void genCode(Code &code) = 0;
+};
 
 class Initializer{
     public:
-        Initializer(InitializerElementList expressions, int line){
-            this->expressions = expressions;
+        Initializer( Expr * expr, int line){
+            this->expr = expr;
             this->line = line;
         }
-        InitializerElementList expressions;
+        Expr * expr;
         int line;
 };
 
-class Declarator{
+class Declarator: public Statement{
     public:
         Declarator(Type type, string id, Initializer * initializer, bool isArray, int line){
             this-> type = type;
@@ -139,12 +164,7 @@ class Parameter{
         int evaluateSemantic();
 };
 
-class Expr{
-    public:
-        int line;
-        virtual Type getType() = 0;
-        virtual void genCode(Code &code) = 0;
-};
+
 
 class IdExpr : public Expr{
     public:
@@ -312,12 +332,14 @@ class IfStatement : public Statement{
 
 class ForStatement: public Statement{
     public:
-        ForStatement(Expr * expr,  Statement * asignation, Statement * stmt, int line){
+        ForStatement(Declarator * decl, Expr * expr,  Statement * asignation, Statement * stmt, int line){
+            this->decl = decl;
             this->expr = expr;
             this->asignation = asignation;
             this->stmt = stmt;
             this->line = line;
         }
+        Declarator * decl;
         Expr* expr;
         Statement * stmt;
         Statement * asignation;

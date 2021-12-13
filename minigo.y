@@ -94,7 +94,7 @@ body: body external_declaration {$$ = $1; $$->push_back($2);}
     | external_declaration {$$ = new StatementList; $$->push_back($1);}
     ;
 
-external_declaration: method_declaration { $$ = $1; }
+external_declaration: method_declaration { $$ = $1; } //ya 
     ;
 
 method_declaration: FUNC_TK ID_TK '(' param_list ')' type  block_statements {
@@ -126,54 +126,59 @@ statement_list: statement_list statement {$$ = $1; $$->push_back($2);}
     | statement { $$ = $1; }
     ;
 
-statement: declaration_statement {$$ = $1;}
-    | asignation_statement {$$ = $1;}
-    | BREAK_TK
-    | CONT_TK
-    | if_statement {$$ = $1;}
-    | jump_statement {$$ = $1;}
-    | FOR_TK for_statement {$$ = $2;}
-    | methodcall {$$ = $1;}
-    | block_statements {$$ = $1;}
+statement: declaration_statement {$$ = $1;} //hacerlo desde 0
+    | expression_statement {$$ = $1;}  //ya 
+    | asignation_statement { $$ = $1;}
+    | BREAK_TK //no se hace
+    | CONT_TK //no se hace
+    | if_statement {$$ = $1;} // ya 
+    | jump_statement {$$ = $1;} // ya
+    | FOR_TK for_statement {$$ = $2;} // cambiarlo pq este era while en el del inge
+    | block_statements {$$ = $1;} //ya
     ;
 
 declaration_statement: VAR_TK ID_TK type { $$ = new Declarator( $3, $2, NULL, false, yylineno,);}
     | VAR_TK ID_TK type '=' expression { $$ = new Declarator( $3, $2, *$5, false, yylineno);}
-    | VAR_TK ID_TK '=' expression { Expr* ex= $4; $$ = new Declarator( $3, ex.getType(), *$4, false, yylineno);}
+    | VAR_TK ID_TK '=' expression { Expr* ex= new $4; $$ = new Declarator( $3, ex.getType(), *$4, false, yylineno);}
     | VAR_TK ID_TK '['']' '=' expression { Expr* ex= $4; $$ = new Declarator( $3, ex.getType(), *$4, true, yylineno);}
     | ID_TK COLON_EQUAL_TK expression { Expr* ex= $3; $$ = new Declarator( $3, ex.getType(), *$3, false, yylineno);}
     ;
 
+expression_statement: methodcall { $$ = new ExprStatement($1, yylineno);}
+
+johnnie = 3
+
 asignation_statement: ID_TK assignment_operator expression{
                         if($2 == EQUAL){
-                            $$ = new AssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 1, $3);
                         }else if($2 == PLUSEQUAL){
-                            $$ = new PlusAssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 2, $3);
                         }else if($2 == MINUSEQUAL){
-                            $$ = new MinusAssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 3, $3);
                         }else if($2 == MULTEQUAL){
-                            $$ = new MultAssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 4, $3);
                         }else if($2 == TRANEQUAL){
-                            $$ = new TranAssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 5, $3);
                         }else if($2 == PORCEQUAL){
-                            $$ = new PorcAssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 6, $3);
                         }else if($2 == SLASHEQUAL){
-                            $$ = new SlashAssignExpr($1,$3,yylineno);
+                            $$ = new AsignationStatement(new IdExpr($1, yylineno), 7, $3);
                         }
                     }
     | ID_TK '[' expression ']' assignment_operator expression
-    | unary_statement { $$ = $1}
+    | unary_statement { $$ = $1;}
     ;
 
 unary_statement: ID_TK PLUS_PLUS_TK { $$ = new PostIncrementExpr((IdExpr*)$1, yylineno); }
     | ID_TK MINUS_MINUS_TK { $$ = new PostDecrementExpr((IdExpr*)$1, yylineno); }
+    ;
 
 jump_statement: RETU_TK expression {$$ = new ReturnStatement($2, yylineno);}
     ;
 
-for_statement: declaration_statement ';' expression ';' asignation_statement block_statements { $$ = new ForStatement($3, $5, yylineno);}
-    | block_statements { $$ = new ForStatement(NULL, $1, yylineno);}
-    | expression statement  { $$ = new ForStatement($1, $2, yylineno);}
+for_statement: declaration_statement ';' expression ';' asignation_statement block_statements { $$ = new ForStatement( $1, $3, $5, $6, yylineno);}
+    | block_statements {Expr * tr= new BoolExpr( 1, yylineno); $$ = new ForStatement( NULL, tr, NULL, $6, yylineno);}
+    | expression block_statements  { $$ = new ForStatement( NULL, $3, NULL, $6, yylineno);}
     ;
 
 methodcall: ID_TK '.' ID_TK '('')'{ $$ = new MethodInvocationExpr((IdExpr*)$1, *(new ArgumentList), yylineno); }
@@ -244,8 +249,8 @@ primary_expression: '('expression ')' {$$ = $2;}
     | LIT_STRING_TK { $$ = new StringExpr($1 , yylineno);}
     | LIT_INT_TK { $$ = new IntExpr($1 , yylineno);}
     | LIT_FLOAT_TK { $$ = new FloatExpr($1 , yylineno);}
-    | TRUE_TK { $$ = new BoolExpr($1 , yylineno);}
-    | FALSE_TK { $$ = new BoolExpr($1 , yylineno);}
+    | TRUE_TK { $$ = new BoolExpr( 1, yylineno);}
+    | FALSE_TK { $$ = new BoolExpr( 0, yylineno);}
     | '['']' type '{' expression_list '}' ';' { $$ = new ArrayExpr((IdExpr*)$1, $3, yylineno); }
     | methodcall { $$ = $1}
     ;

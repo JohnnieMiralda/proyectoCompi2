@@ -2,9 +2,9 @@
 #include <iostream>
 #include <sstream>
 #include <set>
-#include "asm.h"
+// #include "asm.h"
 
-extern Asm assemblyFile;
+// extern Asm assemblyFile;
 
 int globalStackPointer = 0;
 
@@ -48,38 +48,7 @@ map<string, Type> resultTypes ={
 };
 
 const char * intTemps[] = {"$t0","$t1", "$t2","$t3","$t4","$t5","$t6","$t7","$t8","$t9" };
-const char * floatTemps[] = {"$f0",
-                            "$f1",
-                            "$f2",
-                            "$f3",
-                            "$f4",
-                            "$f5",
-                            "$f6",
-                            "$f7",
-                            "$f8",
-                            "$f9",
-                            "$f10",
-                            "$f11",
-                            "$f12",
-                            "$f13",
-                            "$f14",
-                            "$f15",
-                            "$f16",
-                            "$f17",
-                            "$f18",
-                            "$f19",
-                            "$f20",
-                            "$f21",
-                            "$f22",
-                            "$f23",
-                            "$f24",
-                            "$f25",
-                            "$f26",
-                            "$f27",
-                            "$f28",
-                            "$f29",
-                            "$f30",
-                            "$f31"
+const char * floatTemps[] = {"$f0","$f1","$f2","$f3","$f4","$f5","$f6","$f7","$f8","$f9","$f10","$f11","$f12","$f13","$f14","$f15","$f16","$f17","$f18","$f19","$f20","$f21","$f22","$f23","$f24","$f25","$f26","$f27","$f28","$f29","$f30","$f31"
                         };
 
 #define INT_TEMP_COUNT 10
@@ -188,25 +157,24 @@ Type getVariableType(string id){
 
 
 bool variableExists(string id){
-  Type value;
-  if(context != NULL){
-    value = getLocalVariableType(id);
-    //context->variables[id] != 0
-    if(value != 0)
-      return true;
-  }
-  return false;
+    Type value;
+    if(context != NULL){
+        value = getLocalVariableType(id);
+        //context->variables[id] != 0
+        if(value != 0)
+        return true;
+    }
+    return false;
 }
 
 int BlockStatement::evaluateSemantic(){
-    list<Declaration *>::iterator itd = this->declarations.begin();
+    list<Declarator *>::iterator itd = this->declarations.begin();
     while (itd != this->declarations.end())
     {
-        Declaration * dec = *itd;
+        Declarator * dec = *itd;
         if(dec != NULL){
             dec->evaluateSemantic();
         }
-
         itd++;
     }
 
@@ -227,10 +195,10 @@ int BlockStatement::evaluateSemantic(){
 string BlockStatement::genCode(){
     stringstream ss;
 
-    list<Declaration *>::iterator itd = this->declarations.begin();
+    list<Declarator *>::iterator itd = this->declarations.begin();
     while (itd != this->declarations.end())
     {
-        Declaration * dec = *itd;
+        Declarator * dec = *itd;
         if(dec != NULL){
             ss<<dec->genCode()<<endl;
         }
@@ -251,6 +219,16 @@ string BlockStatement::genCode(){
     return ss.str();
 }
 
+void addMethodDeclaration(string id, int line, Type type, ParameterList params){
+    if(methods[id] != 0){
+        cout<<"redefinition of function "<<id<<" in line: "<<line<<endl;
+        exit(0);
+    }
+    methods[id] = new FunctionInfo();
+    methods[id]->returnType = type;
+    methods[id]->parameters = params;
+}
+
 int MethodDefinition::evaluateSemantic(){
     if(this->params.size() > 4){
         cout<< "Method: "<<this->id << " can't have more than 4 parameters, line: "<< this->line<<endl;
@@ -259,7 +237,7 @@ int MethodDefinition::evaluateSemantic(){
 
     addMethodDeclaration(this->id, this->line, this->type, this->params);
     pushContext();
-   
+
     list<Parameter* >::iterator it = this->params.begin();
     while(it != this->params.end()){
         (*it)->evaluateSemantic();
@@ -268,6 +246,12 @@ int MethodDefinition::evaluateSemantic(){
 
     if(this->statement !=NULL ){
         this->statement->evaluateSemantic();
+        if( this->statement->getKind() == RETURN_ST ){
+                if( this->statement->evaluateSemantic() != this->type ){
+                    cout<< "Method: "<<this->id << " return value does not match method type, line: "<< this->line<<endl;
+                    exit(0);
+                }
+        }
     }
     
     popContext();
@@ -297,6 +281,19 @@ Type FloatExpr::getType(){
 }
 
 void FloatExpr::genCode(Code &code){
+    string floatTemp = getFloatTemp();
+    code.place = floatTemp;
+    stringstream ss;
+    ss << "li.s " << floatTemp <<", "<< this->value <<endl;
+    code.code = ss.str();
+    code.type = FLOAT;
+}
+
+Type BoolExpr::getType(){
+    return BOOL;
+}
+
+void BoolExpr::genCode(Code &code){
     string floatTemp = getFloatTemp();
     code.place = floatTemp;
     stringstream ss;
@@ -653,12 +650,37 @@ void StringExpr::genCode(Code &code){
     code.type = STRING;
 }
 
-int WhileStatement::evaluateSemantic(){
+
+
+int Declarator::evaluateSemantic(){
+    if(!variableExists(this->id)){
+            context->variables[this->id] = this->type;
+    }else{
+        cout<<"error: redefinition of variable: "<< this->id<< " line: "<<this->line <<endl;
+        exit(0);
+    }
+    if(this->initializer != NULL){  
+        Type exprType = this->initializer->expr->getType();
+                if(exprType != FLOAT && exprType != INT){
+                    cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to " <<getTypeName(this->type)<< " line: "<<this->line <<endl;
+                    exit(0);
+                }
+    }
+    return 0;
+}
+
+string Declarator::genCode(){
+    
+}
+
+int ForStatement::evaluateSemantic(){
+
     if(this->expr->getType() != BOOL){
         cout<<"Expression for while must be boolean";
         exit(0);
     }
-    
+    this->decl->evaluateSemantic();
+
     pushContext();
     if(this->stmt != NULL){
         this->stmt->evaluateSemantic();
@@ -667,7 +689,20 @@ int WhileStatement::evaluateSemantic(){
     return 0;
 }
 
-string forStatement::genCode(){
+int AsignationStatement::evaluateSemantic(){
+
+    if(variableExists(this->id->id)){
+        if( this->expr->getType() == this->id->getType()){
+            return 0;
+        }
+    }
+    else{
+        cout<<"error: variable: "<< " line: "<<this->id->line <<endl;
+        exit(0);
+    }
+}
+
+string ForStatement::genCode(){
     stringstream ss;
     string forLabel = getNewLabel("while");
     string endForLabel = getNewLabel("endWhile");
@@ -955,7 +990,7 @@ void AssignExpr::genCode(Code &code){
         if(rightSideCode.type == INT)
             ss << "sw "<<rightSideCode.place << ", "<<name <<endl;
         else if(rightSideCode.type == FLOAT)
-             ss << "s.s "<<rightSideCode.place << ", "<<name <<endl;
+            ss << "s.s "<<rightSideCode.place << ", "<<name <<endl;
     }else{
         if(rightSideCode.type == INT)
             ss<< "sw "<< rightSideCode.place <<", "<<codeGenerationVars[name]->offset<<"($sp)"<<endl;

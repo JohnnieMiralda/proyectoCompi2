@@ -8,3 +8,4 @@ enum Type{
     FLOAT_ARRAY,
     BOOL
 };
+
