@@ -34,6 +34,8 @@
 "bool" {return BOOL_TK;}
 "string" {return STRING_TK;}
 "float" {return FLOAT_TK;}
+"fmt.Println" {return PRINT_TK;}
+
 "++" { return PLUS_PLUS_TK;}
 "+=" { return PLUS_EQUAL_TK;}
 "+" { return '+';}

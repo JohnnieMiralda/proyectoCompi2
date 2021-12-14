@@ -113,6 +113,43 @@ class BlockStatement : public Statement{
             return BLOCK_ST;
         }
 };
+class Print: public Expr{
+    public:
+        Print(ExpressionList args, int line){
+            this->args= args;
+            this->line= line;
+        }
+        ExpressionList args;
+        int line;
+        Type getType();
+        void genCode(Code &code);
+};
+
+class BreakStatement: public Statement{
+    public: 
+        BreakStatement(int line){
+            this->line = line;
+        }
+        int line;
+        int evaluateSemantic();
+        StatementKind getKind(){
+            return BREAK_ST;
+        };
+        string genCode();
+};
+
+class ContinueStatement: public Statement{
+    public: 
+        ContinueStatement(int line){
+            this->line=line;
+        }
+        int line;
+        int evaluateSemantic();
+        StatementKind getKind(){
+            return CONT_ST;
+        };
+        string genCode();
+};
 
 class MethodDefinition : public Statement{
     public:

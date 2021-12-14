@@ -193,6 +193,22 @@ int BlockStatement::evaluateSemantic(){
     return 0;
 }
 
+int ContinueStatement::evaluateSemantic(){
+    return 0;
+}
+
+string ContinueStatement::genCode(){
+    return "";
+}
+
+int BreakStatement::evaluateSemantic(){
+    return 0;
+}
+
+string BreakStatement::genCode(){
+    return "";
+}
+
 string BlockStatement::genCode(){
     stringstream ss;
 
@@ -228,6 +244,14 @@ void addMethodDeclaration(string id, int line, Type type, ParameterList params){
     methods[id] = new FunctionInfo();
     methods[id]->returnType = type;
     methods[id]->parameters = params;
+}
+
+Type Print::getType(){
+    return VOID;
+}
+
+void Print::genCode(Code &code){
+
 }
 
 int MethodDefinition::evaluateSemantic(){
@@ -692,12 +716,16 @@ string Declarator::genCode(){
 }
 
 int ForStatement::evaluateSemantic(){
-
-    if(this->expr->getType() != BOOL){
-        cout<<"Expression for while must be boolean";
-        exit(0);
+    if(this->decl != NULL){
+        this->decl->evaluateSemantic();
     }
-    this->decl->evaluateSemantic();
+    if( this->expr != NULL){
+        if(this->expr->getType() != BOOL){
+            cout<<"Expression for while must be boolean";
+            exit(0);
+        }
+    }
+    
 
     pushContext();
     if(this->stmt != NULL){

@@ -82,6 +82,7 @@
 %token TRAN_EQUAL_TK
 %token PORC_EQUAL_TK
 %token EQUALS_TK
+%token PRINT_TK
 
 %type<statement_list_t> statement_list input start body
 %type<statement_t> block_statements  statement external_declaration
@@ -150,8 +151,8 @@ statement_list: statement_list statement {$$ = $1; $$->push_back($2);}
 statement: declaration_statement {$$ = $1;} //hacerlo desde 0
     | expression_statement {$$ = $1;}  //ya 
     | asignation_statement { $$ = $1;}
-    | BREAK_TK { }
-    | CONT_TK { }
+    | BREAK_TK { $$= new BreakStatement(yylineno); }
+    | CONT_TK { $$= new ContinueStatement(yylineno); }
     | if_statement {$$ = $1;} // ya 
     | jump_statement {$$ = $1;} // ya
     | FOR_TK for_statement {$$ = $2;} // cambiarlo pq este era while en el del inge
@@ -183,6 +184,8 @@ asignation_statement: ID_TK assignment_operator expression{
                             $$ = new AsignationStatement(new IdExpr(*$1, yylineno), 6, $3);
                         }else if($2 == SLASHEQUAL){
                             $$ = new AsignationStatement(new IdExpr(*$1, yylineno), 7, $3);
+                        }else if($2 == SLASHEQUAL){
+                            $$ = new AsignationStatement(new IdExpr(*$1, yylineno), 7, $3);
                         }
                     }
     //| ID_TK '[' expression ']' assignment_operator expression
@@ -205,6 +208,7 @@ methodcall: ID_TK '.' ID_TK '('')'{ $$ = new MethodInvocationExpr(new IdExpr(*$3
     | ID_TK '.' ID_TK '(' expression_list ')' { $$ = new MethodInvocationExpr(new IdExpr(*$3,yylineno), *$5, yylineno); }
     | ID_TK '(' expression_list ')'{ $$ = new MethodInvocationExpr(new IdExpr(*$1,yylineno), *$3, yylineno); }
     | ID_TK '('')'{ $$ = new MethodInvocationExpr(new IdExpr(*$1,yylineno), *(new ExpressionList), yylineno); }
+    | PRINT_TK '(' expression_list ')' { $$=new Print(*$3,yylineno); }
     ;
 
 expression_list: expression_list ',' expression {$$ = $1; $$->push_back($3);}

@@ -5,17 +5,25 @@ import (
     "math/rand"
 )
 
+func hola() int {
+    var anderes int=1
+    return 2
+}
+
+
 func main() {
 
     /*
 	Operadores básicos
     */
-    a:= rand.Float32() * 100
-    b:= rand.Float32() * 100
-
+    //a:= rand.Float32() * 100
+    //b:= rand.Float32() * 100
+    a :=1
+    b :=3
+    var h int = hola(5)
     fmt.Println("a = ", a)
     fmt.Println("b = ", b)
-    fmt.Println("a+b = ", (a+b))
+    fmt.Println("a+b = ", (a&&b))
     fmt.Println("a-b = ",(a-b))
     fmt.Println("a*b = ",(a*b))	
     fmt.Println("a/b = ",(a/b))
