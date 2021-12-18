@@ -6,6 +6,9 @@
         "type_traits": "cpp",
         "xlocnum": "cpp",
         "xtr1common": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "iosfwd": "cpp"
     }
 }

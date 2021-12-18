@@ -15,7 +15,8 @@
 
 
 %%
-"//"[^\n]* ;
+[\t \r \n] { /* nada */ }
+"//"[^\n]* {};
 "/*" {BEGIN(CommentBlock);}
 "break" {return BREAK_TK;}
 "continue" {return CONT_TK;}
@@ -95,8 +96,8 @@
 [a-zA-Z]+[a-zA-Z0-9]* {yylval.string_t = new string(yytext); return ID_TK;}
 
 
-[\n]+ ;
-[ ] ;
+[\n]+ {}
+[ ] {}
 . ;
 <CommentBlock>"*/" {BEGIN(INITIAL);}
 <CommentBlock>.|\n {  }

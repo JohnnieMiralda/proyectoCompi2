@@ -6,7 +6,7 @@ import (
 )
 
 func hola() int {
-    var anderes int=1
+    var anderes int = 1
     return 2
 }
 
@@ -18,8 +18,9 @@ func main() {
     */
     //a:= rand.Float32() * 100
     //b:= rand.Float32() * 100
-    a :=1
-    b :=3
+    var a int =1
+    var b int =3
+    /*
     var h int = hola(5)
     fmt.Println("a = ", a)
     fmt.Println("b = ", b)
@@ -33,5 +34,5 @@ func main() {
     fmt.Println("a>=b = ", (a>=b))
     fmt.Println("a<=b = ", (a<=b))
     fmt.Println("true&&true = ", (true && false))
-
+    */
 }

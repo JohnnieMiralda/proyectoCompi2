@@ -269,15 +269,35 @@ int MethodDefinition::evaluateSemantic(){
         it++;
     }
 
-    if(this->statement !=NULL ){
-        this->statement->evaluateSemantic();
-        if( this->statement->getKind() == RETURN_ST ){
-                if( this->statement->evaluateSemantic() != this->type ){
-                    cout<< "Method: "<<this->id << " return value does not match method type, line: "<< this->line<<endl;
-                    exit(0);
-                }
+    list<Declarator *>::iterator itd = this->declarations.begin();
+    while (itd != this->declarations.end())
+    {
+        Declarator * dec = *itd;
+        cout<<dec->id<<"en chequeo"<<endl;
+        if(dec != NULL){
+            dec->evaluateSemantic();
+        }
+        itd++;
+    }
+
+    // this->statements->evaluateSemantic();
+    list<Statement* >::iterator its = this->statements.begin();
+    while(its != this->statements.end()){
+        Statement * stmt = *its;
+        if(stmt != NULL){
+            cout<<"kind"<<(StatementKind)stmt->getKind()<<endl;
+            int type= stmt->evaluateSemantic();
+            if( stmt->getKind() == RETURN_ST ){
+                    if( type != this->type ){
+                        cout<< "Method: "<<this->id << " return value does not match method type, line: "<< this->line<<endl;
+                        exit(0);
+                    }
+            }
         }
     }
+
+        its++;
+    
     
     popContext();
 
@@ -285,7 +305,7 @@ int MethodDefinition::evaluateSemantic(){
 }
 
 string MethodDefinition::genCode(){
-    return this->statement->genCode();
+    return "";
 }
 
 Type IntExpr::getType(){
@@ -319,12 +339,12 @@ Type BoolExpr::getType(){
 }
 
 void BoolExpr::genCode(Code &code){
-    string floatTemp = getFloatTemp();
-    code.place = floatTemp;
+    string IntTemp = getIntTemp();
+    code.place = IntTemp;
     stringstream ss;
-    ss << "li.s " << floatTemp <<", "<< this->value <<endl;
+    ss << "li " << IntTemp <<", "<< this->value <<endl;
     code.code = ss.str();
-    code.type = FLOAT;
+    code.type = BOOL;
 }
 
 #define IMPLEMENT_BINARY_GET_TYPE(name)\
@@ -569,6 +589,10 @@ void IdExpr::genCode(Code &code){
             string floatTemp = getFloatTemp();
             code.place = floatTemp;
             code.code = "l.s "+ floatTemp + ", " +to_string(codeGenerationVars[this->id]->offset) +"($sp)\n";
+        }else if(codeGenerationVars[this->id]->type == BOOL && !codeGenerationVars[this->id]->isArray){
+            string boolTemp = getIntTemp();
+            code.place = boolTemp;
+            code.code = "lw "+ boolTemp + ", " +to_string(codeGenerationVars[this->id]->offset) +"($sp)\n";
         }
     }
 }
@@ -627,6 +651,8 @@ void MethodInvocationExpr::genCode(Code &code){
             ss << "move $a"<<i<<", "<< (*placesIt).place<<endl;
         else if((*placesIt).type == FLOAT)
             ss << "mfc1 $a"<<i<<", "<< (*placesIt).place<<endl;
+        else if((*placesIt).type == BOOL)
+            ss << "move $a"<<i<<", "<< (*placesIt).place<<endl;
         i++;
         placesIt++;
     }
@@ -641,6 +667,10 @@ void MethodInvocationExpr::genCode(Code &code){
         reg = getFloatTemp();
         ss << "mfc1 $v0, "<< reg<<endl;
     }
+    else if(methods[this->id->id]->returnType == BOOL){
+        reg = getIntTemp();
+        ss << "move "<< reg<<", $v0";
+    }
     code.code = ss.str();
     code.place = reg;
 }
@@ -650,6 +680,28 @@ Type PostIncrementExpr::getType(){
 }
 
 string PostIncrementExpr::genCode(){
+    stringstream ss;
+    // this->expr->evaluateSemantic();
+    Type exprType = this->expr->getType();
+    Code code;
+    if (exprType == INT){
+        this->expr->genCode(code);
+        ss<<code.code<<endl;
+        ss<<"addi "<< code.place <<" , "<< code.place << " , 1 "<<endl;
+        ss<<"sw "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
+        releaseRegister(code.place);
+        return ss.str();
+    }else{
+        this->expr->genCode(code);
+        string floattemp= getFloatTemp();
+        ss<<code.code<<endl;
+        ss<< "li.s" << floattemp <<" , 1.0"<<endl;
+        ss<<"add.s "<< code.place <<" , "<< code.place << " , "<<  floattemp <<endl;
+        ss<<"s.s "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
+        releaseRegister(code.place);
+        releaseRegister(floattemp);
+        return ss.str();
+    }
     return "";
 }
 
@@ -675,6 +727,26 @@ Type PostDecrementExpr::getType(){
 }
 
 string PostDecrementExpr::genCode(){
+    stringstream ss;
+    // this->expr->evaluateSemantic();
+    Type exprType = this->expr->getType();
+    Code code;
+    if (exprType == INT){
+        this->expr->genCode(code);
+        ss<<code.code<<endl;
+        ss<<"addi "<< code.place <<" , "<< code.place << " , -1 "<<endl;
+        ss<<"sw "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
+        releaseRegister(code.place);
+    }else{
+        this->expr->genCode(code);
+        string floattemp= getFloatTemp();
+        ss<<code.code<<endl;
+        ss<< "li.s" << floattemp <<" , 1.0"<<endl;
+        ss<<"sub.s "<< code.place <<" , "<< code.place << " , "<<  floattemp <<endl;
+        ss<<"s.s "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
+        releaseRegister(code.place);
+        releaseRegister(floattemp);
+    }
     return "";
 }
 
@@ -695,6 +767,8 @@ void StringExpr::genCode(Code &code){
 
 
 int Declarator::evaluateSemantic(){
+    cout<<this->id<< " "<<this->line;
+    
     if(!variableExists(this->id)){
             context->variables[this->id] = this->type;
     }else{
@@ -703,10 +777,10 @@ int Declarator::evaluateSemantic(){
     }
     if(this->initializer != NULL){  
         Type exprType = this->initializer->expr->getType();
-                if(exprType != FLOAT && exprType != INT){
-                    cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to " <<getTypeName(this->type)<< " line: "<<this->line <<endl;
-                    exit(0);
-                }
+        if(exprType != FLOAT && exprType != INT){
+            cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to " <<getTypeName(this->type)<< " line: "<<this->line <<endl;
+            exit(0);
+        }
     }
     return 0;
 }

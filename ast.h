@@ -153,23 +153,25 @@ class ContinueStatement: public Statement{
 
 class MethodDefinition : public Statement{
     public:
-        MethodDefinition(Type type, string id, ParameterList params, Statement * statement, int line){
+        MethodDefinition(Type type, string id, ParameterList params, StatementList statement, DeclarationList declarations, int line){
             this->type = type;
             this->id = id;
             this->params = params;
-            this->statement = statement;
+            this->statements = statement;
+            this->declarations = declarations;
             this->line = line;
         }
 
         Type type;
         string id;
         ParameterList params;
-        Statement * statement;
+        StatementList  statements;
+        DeclarationList declarations;
         int line;
         int evaluateSemantic();
         string genCode();
         StatementKind getKind(){
-            return DECLARATION_ST;
+            return FUNCTION_DEFINITION_ST;
         }
 };
 
@@ -201,7 +203,7 @@ class Declarator: public Statement{
         int evaluateSemantic();
         string genCode();
         StatementKind getKind(){
-            return FUNCTION_DEFINITION_ST;
+            return DECLARATION_ST;
         }
 };
 
@@ -244,11 +246,11 @@ class FloatExpr : public Expr{
 };
 class BoolExpr : public Expr{
     public:
-        BoolExpr(bool value, int line){
+        BoolExpr(int value, int line){
             this->value = value;
             this->line = line;
         }
-        bool value;
+        int value;
         Type getType();
         void genCode(Code &code);
 };
@@ -282,11 +284,11 @@ class UnaryExpr : public Expr{
 
 class PostIncrementExpr: public Statement{
     public:
-        PostIncrementExpr(Expr * expr, int line){
+        PostIncrementExpr(IdExpr * expr, int line){
             this->expr = expr;
             this->line = line;
         }
-        Expr * expr;
+        IdExpr * expr;
         int line;
         Type getType();
         string genCode();
@@ -298,11 +300,11 @@ class PostIncrementExpr: public Statement{
 
 class PostDecrementExpr: public Statement{
     public:
-        PostDecrementExpr(Expr * expr, int line){
+        PostDecrementExpr(IdExpr * expr, int line){
             this->expr = expr;
             this->line = line;
         }
-        Expr * expr;
+        IdExpr * expr;
         int line;
         Type getType();
         string genCode();
