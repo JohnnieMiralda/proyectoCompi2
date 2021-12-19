@@ -186,7 +186,7 @@ class Initializer{
         int line;
 };
 
-class Declarator: public Statement{
+class Declarator{
     public:
         Declarator(Type type, string id, Initializer * initializer, bool isArray, int line){
             this-> type = type;

@@ -43,6 +43,7 @@
     ParameterList * parameter_list_t;
 
     Declarator * declarator_t;
+    DeclarationList * declarator_list_t;
     Initializer * initializer_t;
     InitializerElementList * initializer_list_t;
 
@@ -87,7 +88,8 @@
 
 %type<statement_list_t> statement_list input start body
 %type<statement_t> block_statements  statement external_declaration
-%type<declarator_t>declaration_statement
+%type<declarator_t>declaration_statement 
+%type<declarator_list_t>declaration_list
 %type<parameter_list_t> param_list
 %type<parameter_t> param
 %type<int_t> type assignment_operator
@@ -126,11 +128,20 @@ method_declaration: FUNC_TK ID_TK '(' param_list ')' type '{' statement_list '}'
                     delete $4;
                     delete list;
                     }
+    |FUNC_TK ID_TK '(' param_list ')' type '{' declaration_list statement_list '}' {
+                    $$ = new MethodDefinition((Type)$6, *$2, *$4, *$9, *$8,yylineno );
+                    delete $4;
+                    }
     | FUNC_TK ID_TK '('')' type '{' statement_list '}' {
                     DeclarationList * list = new DeclarationList();
-                     ParameterList * pm = new ParameterList;
-                     $$ = new MethodDefinition((Type)$5, *$2, *pm, *$7, *list,yylineno );
+                    ParameterList * pm = new ParameterList;
+                    $$ = new MethodDefinition((Type)$5, *$2, *pm, *$7, *list,yylineno );
                     delete list;
+                    delete pm;
+                    }
+    | FUNC_TK ID_TK '('')' type '{' declaration_list statement_list '}' {
+                    ParameterList * pm = new ParameterList;
+                    $$ = new MethodDefinition((Type)$5, *$2, *pm, *$8, *$7,yylineno );
                     delete pm;
                     }
     | FUNC_TK ID_TK '(' param_list ')' '[' ']' type '{' statement_list '}' {
@@ -139,11 +150,20 @@ method_declaration: FUNC_TK ID_TK '(' param_list ')' type '{' statement_list '}'
                     delete list;
                     delete $4;
                     }
+    | FUNC_TK ID_TK '(' param_list ')' '[' ']' type '{' declaration_list statement_list '}' {
+                    $$ = new MethodDefinition((Type)$8, *$2, *$4, *$11 ,*$10, yylineno );
+                    delete $4;
+                    }
     | FUNC_TK ID_TK '(' ')' '[' ']' type '{' statement_list '}'{
                     DeclarationList * list = new DeclarationList();
                      ParameterList * pm = new ParameterList;
                      $$ = new MethodDefinition((Type)$7, *$2, *pm, *$9, *list, yylineno );
                     delete list;
+                    delete pm;
+                    }
+    | FUNC_TK ID_TK '(' ')' '[' ']' type '{' declaration_list statement_list '}'{
+                    ParameterList * pm = new ParameterList;
+                    $$ = new MethodDefinition((Type)$7, *$2, *pm, *$10, *$9, yylineno );
                     delete pm;
                     }
     | FUNC_TK MAIN_TK '('')' '{' statement_list '}' {
@@ -154,17 +174,28 @@ method_declaration: FUNC_TK ID_TK '(' param_list ')' type '{' statement_list '}'
                     delete list;
                     delete pm;
                     }
+    | FUNC_TK MAIN_TK '('')' '{' declaration_list statement_list '}' {
+                    cout<<"main"<<endl;
+                    ParameterList * pm = new ParameterList;
+                    $$ = new MethodDefinition((Type)VOID, *$2, *pm, *$7, *$6, yylineno );
+                    delete pm;
+                    }
     ;
 
 statement_list: statement_list statement {  cout<<"stateloop"<<endl; $$ = $1; $$->push_back($2);}
     | statement { cout<<"state"<<endl; $$ = new StatementList; $$->push_back($1); }
     ;
 
+declaration_list: declaration_list declaration_statement {  cout<<"stateloop"<<endl; $$ = $1; $$->push_back($2);}
+    | declaration_statement { cout<<"state"<<endl; $$ = new DeclarationList; $$->push_back($1); }
+    ;
+
+
+
 // statement_list: statement {  $$ = new StatementList; $$->push_back($1); }
 //     ;
 
-statement: declaration_statement {cout<<"declararion"<<endl; $$ = $1;} //hacerlo desde 0
-    | expression_statement {$$ = $1;}  //ya 
+statement: expression_statement {$$ = $1;}  //ya 
     | asignation_statement { $$ = $1;}
     | BREAK_TK { $$= new BreakStatement(yylineno); }
     | CONT_TK { $$= new ContinueStatement(yylineno); }
@@ -199,8 +230,6 @@ asignation_statement: ID_TK assignment_operator expression{
                             $$ = new AsignationStatement(new IdExpr(*$1, yylineno), 6, $3);
                         }else if($2 == SLASHEQUAL){
                             $$ = new AsignationStatement(new IdExpr(*$1, yylineno), 7, $3);
-                        }else if($2 == SLASHEQUAL){
-                            $$ = new AsignationStatement(new IdExpr(*$1, yylineno), 7, $3);
                         }
                     }
     //| ID_TK '[' expression ']' assignment_operator expression
@@ -233,13 +262,16 @@ if_statement: IF_TK expression block_statements {$$ = new IfStatement($2, $3, yy
     | IF_TK expression block_statements ELSE_TK statement {$$ = new ElseStatement($2, $3, $5, yylineno);}
     ;
 
-block_statements: '{' statement_list '}'
-                    { 
-                            DeclarationList * list = new DeclarationList();
-                            $$ = new BlockStatement(*$2, *list, yylineno);
-                            delete list;
-
+block_statements: '{' statement_list '}' { DeclarationList * list = new DeclarationList();
+                        $$ = new BlockStatement(*$2, *list, yylineno);
+                        delete list;
                     }
+    | '{' declaration_list statement_list '}' { $$ = new BlockStatement(*$3, *$2, yylineno);}
+    | '{' declaration_list  '}' { 
+                StatementList * list= new StatementList();
+                $$ = new BlockStatement(*list, *$2, yylineno);
+                delete list;
+            }
     ;
 
 type: INT_TK {$$ = INT;}

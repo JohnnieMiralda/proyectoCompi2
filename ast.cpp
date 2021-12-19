@@ -273,7 +273,7 @@ int MethodDefinition::evaluateSemantic(){
     while (itd != this->declarations.end())
     {
         Declarator * dec = *itd;
-        cout<<dec->id<<"en chequeo"<<endl;
+        cout<<endl<<dec->id<<" en chequeo"<<endl;
         if(dec != NULL){
             dec->evaluateSemantic();
         }
@@ -286,17 +286,19 @@ int MethodDefinition::evaluateSemantic(){
         Statement * stmt = *its;
         if(stmt != NULL){
             cout<<"kind"<<(StatementKind)stmt->getKind()<<endl;
-            int type= stmt->evaluateSemantic();
+            int cosa=stmt->evaluateSemantic();
             if( stmt->getKind() == RETURN_ST ){
-                    if( type != this->type ){
-                        cout<< "Method: "<<this->id << " return value does not match method type, line: "<< this->line<<endl;
-                        exit(0);
-                    }
+                cout<<"en return "<<(Type)cosa<<endl;
+                if(Type(cosa) != this->type ){
+                    cout<<"Error return value does not match function definition type "<<endl;
+                    exit(0);
+                }
             }
         }
+        its++;
     }
 
-        its++;
+        
     
     
     popContext();
@@ -777,7 +779,7 @@ int Declarator::evaluateSemantic(){
     }
     if(this->initializer != NULL){  
         Type exprType = this->initializer->expr->getType();
-        if(exprType != FLOAT && exprType != INT){
+        if(exprType != FLOAT && exprType != INT && exprType != BOOL){
             cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to " <<getTypeName(this->type)<< " line: "<<this->line <<endl;
             exit(0);
         }
@@ -792,6 +794,12 @@ string Declarator::genCode(){
 int ForStatement::evaluateSemantic(){
     if(this->decl != NULL){
         this->decl->evaluateSemantic();
+    }
+    if(this->asignation != NULL){
+        this->asignation->evaluateSemantic();
+    }
+    if(this->stmt != NULL){
+        this->evaluateSemantic();
     }
     if( this->expr != NULL){
         if(this->expr->getType() != BOOL){
@@ -811,15 +819,40 @@ int ForStatement::evaluateSemantic(){
 
 int AsignationStatement::evaluateSemantic(){
 
-    if(variableExists(this->id->id)){
-        if( this->expr->getType() == this->id->getType()){
-            return 0;
+    if( this->id->getType() != BOOL  ){
+        if(variableExists(this->id->id)){
+            if( this->expr->getType() == this->id->getType()){
+                return 0;
+            }else{
+                cout<<"error: variable: "<< this->id->id << " does not match type" << " line: "<<this->id->line <<endl;
+                exit(0);
+            }
+        }
+        else{
+            cout<<"error: variable: "<< " line: "<<this->id->line <<endl;
+            exit(0);
+        }
+    }else{
+        if(this->operador==1){
+            if(variableExists(this->id->id)){
+                if( this->expr->getType() == this->id->getType()){
+                    return 0;
+                }else{
+                    cout<<"error: variable: "<< this->id->id << " does not match type" << " line: "<<this->id->line <<endl;
+                    exit(0);
+                }
+            }
+            else{
+                cout<<"error: variable: "<< " line: "<<this->id->line <<endl;
+                exit(0);
+            }
+        }else{
+            cout<<"error: variable: "<< this->id->id << "does not support this operration statement line: "<<this->id->line <<endl;
+            exit(0);
         }
     }
-    else{
-        cout<<"error: variable: "<< " line: "<<this->id->line <<endl;
-        exit(0);
-    }
+
+    
     return 0;
 }
 
