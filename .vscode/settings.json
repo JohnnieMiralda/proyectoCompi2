@@ -10,5 +10,6 @@
         "list": "cpp",
         "string": "cpp",
         "iosfwd": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }
