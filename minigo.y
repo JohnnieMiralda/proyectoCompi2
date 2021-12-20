@@ -187,17 +187,17 @@ method_declaration: FUNC_TK ID_TK '(' param_list ')' type '{' statement_list '}'
                     delete pm;
                     }
     | FUNC_TK MAIN_TK '('')' '{' statement_list '}' {
-                    cout<<"main"<<endl;
+                    cout<<"main"<< *$2<<endl;
                     DeclarationList * list = new DeclarationList();
                      ParameterList * pm = new ParameterList;
-                     $$ = new MethodDefinition((Type)VOID, *$2, *pm, *$6, *list, yylineno );
+                     $$ = new MethodDefinition((Type)VOID, "main", *pm, *$6, *list, yylineno );
                     delete list;
                     delete pm;
                     }
     | FUNC_TK MAIN_TK '('')' '{' declaration_list statement_list '}' {
-                    cout<<"main"<<endl;
+                    cout<<"main"<<*$2<<endl;
                     ParameterList * pm = new ParameterList;
-                    $$ = new MethodDefinition((Type)VOID, *$2, *pm, *$7, *$6, yylineno );
+                    $$ = new MethodDefinition((Type)VOID, "main", *pm, *$7, *$6, yylineno );
                     delete pm;
                     }
     ;

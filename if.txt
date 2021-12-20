@@ -1,25 +1,21 @@
 package main
 
-import "fmt"
+import "lol"
 
 
-func hola( hol int, hoa float)int{
-    return hol + hoa
-}
 
-func main() {
+
+func main () {
 
      /*
 	Prueba con if
     */
     var a int = 5;
     var b = 8;
-    var in float = hola(2,2.7);
     if a % 2 == 0 {
         fmt.Println("a is even")
     } else {
-        //fmt.Println("a is odd")
-        return b
+        fmt.Println("a is odd")
     }
 
     if b%4 == 0 {

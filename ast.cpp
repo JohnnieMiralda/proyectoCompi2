@@ -330,25 +330,38 @@ string retrieveState(string state){
     return state;
 }
 string MethodDefinition::genCode(){
-    if(this->statements == NULL)
-        return "";
+    
 
     int stackPointer = 4;
     globalStackPointer = 0;
     stringstream code;
+
     code << this->id<<": "<<endl;
     string state = saveState();
     code <<state<<endl;
     if(this->params.size() > 0){
-        list<Parameter >::iterator it = this->params.begin();
+        list<Parameter*>::iterator it = this->params.begin();
         for(int i = 0; i< this->params.size(); i++){
+            Parameter * pm= *it;
             code << "sw $a"<<i<<", "<< stackPointer<<"($sp)"<<endl;
-            codeGenerationVars[(it)->declarator->id] = new VariableInfo(stackPointer, false, true, (*it)->type);
+            codeGenerationVars[pm->declarator->id] = new VariableInfo(stackPointer, false, true, pm->type);
             stackPointer +=4;
             globalStackPointer +=4;
             it++;
         }
     }
+
+    list<Declarator *>::iterator itd = this->declarations.begin();
+    while (itd != this->declarations.end())
+    {
+        Declarator * dec = *itd;
+        if(dec != NULL){
+            code<<dec->genCode()<<endl;
+        }
+
+        itd++;
+    }
+
     list<Statement *>::iterator its = this->statements.begin();
     while (its != this->statements.end())
     {
@@ -499,11 +512,11 @@ string intArithmetic(Code &leftCode, Code &rightCode, Code &code, char op){
             break;
         case '/':
             ss << "div "<< leftCode.place <<", "<< rightCode.place
-            << "mflo "<< code.place;
+            <<endl<< "mflo "<< code.place;
             break;
         case '%':
             ss << "div "<< leftCode.place <<", "<< rightCode.place
-            << "mfhi "<< code.place;
+            <<endl<< "mfhi "<< code.place;
             break;
         default:
             break;
@@ -915,9 +928,7 @@ string Declarator::genCode(){
 }
 
 int ForStatement::evaluateSemantic(){
-    if(this->decl != NULL){
-        this->decl->evaluateSemantic();
-    }
+    
     if(this->asignation != NULL){
         this->asignation->evaluateSemantic();
     }
@@ -931,6 +942,9 @@ int ForStatement::evaluateSemantic(){
     
 
     pushContext();
+    if(this->decl != NULL){
+        this->decl->evaluateSemantic();
+    }
     if(this->stmt != NULL){
         this->stmt->evaluateSemantic();
     }
