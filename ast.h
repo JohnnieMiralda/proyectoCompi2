@@ -60,6 +60,7 @@ class Statement{
         virtual int evaluateSemantic() = 0;
         virtual StatementKind getKind() = 0;
         virtual string genCode() = 0;
+        // virtual string genCode(string label) = 0;
 };
 class Expr{
     public:
@@ -357,14 +358,14 @@ class BinaryExpr : public Expr{
 
 class ElseStatement : public Statement{
     public:
-        ElseStatement(Expr * conditionalExpr, Statement * trueStatement, Statement * falseStatement, int line){
+        ElseStatement(Expr * conditionalExpr, BlockStatement * trueStatement, Statement * falseStatement, int line){
             this->conditionalExpr = conditionalExpr;
             this->trueStatement = trueStatement;
             this->line = line;
             this->falseStatement = falseStatement;
         }
         Expr * conditionalExpr;
-        Statement * trueStatement;
+        BlockStatement * trueStatement;
         Statement * falseStatement;
         string genCode();
         int evaluateSemantic();
@@ -373,13 +374,13 @@ class ElseStatement : public Statement{
 
 class IfStatement : public Statement{
     public:
-        IfStatement(Expr * conditionalExpr, Statement * trueStatement, int line){
+        IfStatement(Expr * conditionalExpr, BlockStatement * trueStatement, int line){
             this->conditionalExpr = conditionalExpr;
             this->trueStatement = trueStatement;
             this->line = line;
         }
         Expr * conditionalExpr;
-        Statement * trueStatement;
+        BlockStatement * trueStatement;
         string genCode();
         int evaluateSemantic();
         StatementKind getKind(){return IF_ST;}

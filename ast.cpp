@@ -23,6 +23,7 @@ class VariableInfo{
 };
 
 map<string, VariableInfo *> codeGenerationVars;
+map<string, bool> initilizedVariables;
 
 class ContextStack{
     public:
@@ -198,7 +199,9 @@ int ContinueStatement::evaluateSemantic(){
 }
 
 string ContinueStatement::genCode(){
-    return "";
+    stringstream ss;
+    // ss<<"j "<<label;
+    return ss.str();
 }
 
 int BreakStatement::evaluateSemantic(){
@@ -206,7 +209,9 @@ int BreakStatement::evaluateSemantic(){
 }
 
 string BreakStatement::genCode(){
-    return "";
+    stringstream ss;
+    // ss<<"j "<<label;
+    return ss.str();
 }
 
 string BlockStatement::genCode(){
@@ -228,7 +233,11 @@ string BlockStatement::genCode(){
     {
         Statement * stmt = *its;
         if(stmt != NULL){
-            ss<<stmt->genCode()<<endl;
+            if(stmt->getKind()== BREAK_ST || stmt->getKind()== CONT_ST){
+                // ss<<stmt->genCode(label)<<endl;
+            }else{
+                ss<<stmt->genCode()<<endl;
+            }
         }
 
         its++;
@@ -298,16 +307,72 @@ int MethodDefinition::evaluateSemantic(){
         its++;
     }
 
-        
-    
-    
     popContext();
 
     return 0;
 }
-
+string saveState(){
+    set<string>::iterator it = floatTempMap.begin();
+    stringstream ss;
+    ss<<"sw $ra, " <<globalStackPointer<< "($sp)\n";
+    globalStackPointer+=4;
+    return ss.str();
+}
+string retrieveState(string state){
+    std::string::size_type n = 0;
+    string s = "sw";
+    while ( ( n = state.find( s, n ) ) != std::string::npos )
+    {
+    state.replace( n, s.size(), "lw" );
+    n += 2;
+    globalStackPointer-=4;
+    }
+    return state;
+}
 string MethodDefinition::genCode(){
-    return "";
+    if(this->statements == NULL)
+        return "";
+
+    int stackPointer = 4;
+    globalStackPointer = 0;
+    stringstream code;
+    code << this->id<<": "<<endl;
+    string state = saveState();
+    code <<state<<endl;
+    if(this->params.size() > 0){
+        list<Parameter >::iterator it = this->params.begin();
+        for(int i = 0; i< this->params.size(); i++){
+            code << "sw $a"<<i<<", "<< stackPointer<<"($sp)"<<endl;
+            codeGenerationVars[(it)->declarator->id] = new VariableInfo(stackPointer, false, true, (*it)->type);
+            stackPointer +=4;
+            globalStackPointer +=4;
+            it++;
+        }
+    }
+    list<Statement *>::iterator its = this->statements.begin();
+    while (its != this->statements.end())
+    {
+        Statement * stmt = *its;
+        if(stmt != NULL){
+            if(stmt->getKind()== BREAK_ST || stmt->getKind()== CONT_ST){
+                // ss<<stmt->genCode(label)<<endl;
+            }else{
+                code<<stmt->genCode()<<endl;
+            }
+        }
+
+        its++;
+    }
+    stringstream sp;
+    int currentStackPointer = globalStackPointer;
+    sp << endl<<"addiu $sp, $sp, -"<<currentStackPointer<<endl;
+    code << retrieveState(state);
+    code << "addiu $sp, $sp, "<<currentStackPointer<<endl;
+    code <<"jr $ra"<<endl;
+    codeGenerationVars.clear();
+    string result = code.str();
+    result.insert(id.size() + 2, sp.str());
+    return result;
 }
 
 Type IntExpr::getType(){
@@ -436,6 +501,10 @@ string intArithmetic(Code &leftCode, Code &rightCode, Code &code, char op){
             ss << "div "<< leftCode.place <<", "<< rightCode.place
             << "mflo "<< code.place;
             break;
+        case '%':
+            ss << "div "<< leftCode.place <<", "<< rightCode.place
+            << "mfhi "<< code.place;
+            break;
         default:
             break;
     }
@@ -492,12 +561,26 @@ int Parameter::evaluateSemantic(){
 
 
 Type UnaryExpr::getType(){
-    Type exprType = this->expr->getType();
-    return getUnaryType(exprType, this->type);
+    return this->expr->getType();
 }
 
 void UnaryExpr::genCode(Code &code){
-    
+    Code exprCode;
+    stringstream ss;
+
+    ss<<code.code<<endl;
+
+    this->expr->genCode(exprCode);
+    ss<<exprCode.code;
+
+    if(exprCode.type == BOOL){
+        ss<<"not "<< exprCode.place << " , " << exprCode.place<<endl;
+        code.code= ss.str();
+        code.type= exprCode.type;
+        code.place= exprCode.place;
+    }else{
+        code.code=ss.str();
+    }
 }
 
 Type ArrayExpr::getType(){
@@ -783,12 +866,52 @@ int Declarator::evaluateSemantic(){
             cout<<"error: invalid conversion from: "<< getTypeName(exprType) <<" to " <<getTypeName(this->type)<< " line: "<<this->line <<endl;
             exit(0);
         }
+        initilizedVariables[this->id]=true;
+    }else{
+        initilizedVariables[this->id]=false;
     }
     return 0;
 }
 
 string Declarator::genCode(){
-    return "";
+    stringstream ss;
+    Code code;
+    if( this->initializer != NULL){
+        this->initializer->expr->genCode(code);
+        ss<<code.code<<endl;
+        if(!this->isArray){
+            codeGenerationVars[this->id]= new VariableInfo(globalStackPointer, false, false, this->type);
+            globalStackPointer+=4;
+            if(this->type != FLOAT){
+                ss<<" sw "<< code.place << " , " << codeGenerationVars[this->id]->offset << "($sp)"<<endl;
+            }else{
+                ss<<" s.s "<< code.place << " , " << codeGenerationVars[this->id]->offset << "($sp)"<<endl;
+            }
+            releaseRegister(code.place);
+        }else{
+            //logica del array
+        }
+    }else{
+        if(!this->isArray){
+            codeGenerationVars[this->id]= new VariableInfo(globalStackPointer, false, false, this->type);
+            globalStackPointer+=4;
+            if(this->type != FLOAT){
+                string tempint= getIntTemp();
+                ss<< "li " << tempint << " , $zero" <<endl;
+                ss<<" sw "<< tempint << " , " << codeGenerationVars[this->id]->offset << "($sp)"<<endl;
+                releaseRegister(tempint);
+            }
+            else{
+                string tempFloat= getFloatTemp();
+                ss<< "li.s " << tempFloat << " , $zero" <<endl;
+                ss<<" s.s "<< tempFloat << " , " << codeGenerationVars[this->id]->offset << "($sp)"<<endl;
+                releaseRegister(tempFloat);
+            }
+            
+        }
+    }
+
+    return ss.str();
 }
 
 int ForStatement::evaluateSemantic(){
@@ -798,10 +921,8 @@ int ForStatement::evaluateSemantic(){
     if(this->asignation != NULL){
         this->asignation->evaluateSemantic();
     }
-    if(this->stmt != NULL){
-        this->evaluateSemantic();
-    }
     if( this->expr != NULL){
+        
         if(this->expr->getType() != BOOL){
             cout<<"Expression for while must be boolean";
             exit(0);
@@ -818,9 +939,10 @@ int ForStatement::evaluateSemantic(){
 }
 
 int AsignationStatement::evaluateSemantic(){
-
+    
     if( this->id->getType() != BOOL  ){
         if(variableExists(this->id->id)){
+
             if( this->expr->getType() == this->id->getType()){
                 return 0;
             }else{
@@ -857,25 +979,130 @@ int AsignationStatement::evaluateSemantic(){
 }
 
 string AsignationStatement::genCode(){
-    return "";
+    stringstream ss;
+    Code code;
+    this->expr->genCode(code);
+    ss<<code.code<<endl;
+    if(code.type != FLOAT){
+        string tempint= getIntTemp();
+        switch ((int)this->operador)
+        {
+        case 1:
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 2:
+            ss<< "lw "<< tempint << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "add "<< code.place << " , " << code.place << " , "<< tempint <<endl;
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 3:
+            ss<< "lw "<< tempint << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "sub "<< code.place << " , " << code.place << " , "<< tempint <<endl;
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 4:
+            ss<< "lw "<< tempint << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "mul "<< code.place << " , " << code.place << " , "<< tempint <<endl;
+            // ss<< "mult "<< code.place << " , "<< tempint <<endl;
+            // ss<< "mflo "<< code.place << endl;
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 5:
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 6:
+            ss<< "lw "<< tempint << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "div "<< code.place << " , "<< tempint <<endl;
+            ss<< "mfhi "<< code.place << endl;
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 7:
+            ss<< "lw "<< tempint << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "div "<< code.place << " , "<< tempint <<endl;
+            ss<< "mflo "<< code.place << endl;
+            ss<< "sw "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        default:
+            break;
+        }
+        releaseRegister(tempint);
+        releaseRegister(code.place);
+    }else{
+        string tempFloat= getFloatTemp();
+        switch ((int) this->operador)
+        {
+        case 1:
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 2:
+            ss<< "l.s "<< tempFloat << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "add.s "<< code.place << " , " << code.place << " , "<< tempFloat <<endl;
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 3:
+            ss<< "l.s "<< tempFloat << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "sub.s "<< code.place << " , " << code.place << " , "<< tempFloat <<endl;
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 4:
+            ss<< "l.s "<< tempFloat << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "mul.s "<< code.place << " , " << code.place << " , "<< tempFloat <<endl;
+            // ss<< "mult "<< code.place << " , "<< tempint <<endl;
+            // ss<< "mflo "<< code.place << endl;
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 5:
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 6:
+            ss<< "l.s "<< tempFloat << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "div.s "<< code.place << " , "<< code.place << " , "<< tempFloat <<endl;
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        case 7:
+            ss<< "l.s "<< tempFloat << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            ss<< "div.s "<< code.place << " , "<< code.place << " , "<< tempFloat <<endl;
+            ss<< "s.s "<< code.place << " , " << codeGenerationVars[this->id->id]->offset << "($sp)"<<endl;
+            break;
+        default:
+            break;
+        }
+        releaseRegister(tempFloat);
+        releaseRegister(code.place);
+    }
+    return ss.str();
 }
 
 string ForStatement::genCode(){
     stringstream ss;
-    string forLabel = getNewLabel("while");
-    string endForLabel = getNewLabel("endWhile");
+    string forLabel = getNewLabel("for");
+    string endForLabel = getNewLabel("endFor");
     Code code;
+
+    if (this->decl != NULL){
+        ss<<this->decl->genCode();
+    }
+
     this->expr->genCode(code);
     ss << forLabel << ": "<< endl
     << code.code <<endl;
-    if(code.type == INT){
+    if(code.type == INT || code.type == BOOL){
         ss<< "beqz "<< code.place << ", " << endForLabel <<endl;
     }else{
         ss << "bc1f "<< endForLabel <<endl;
     }
-    ss<< this->stmt->genCode() <<endl
-    << "j " << forLabel <<endl
-    << endForLabel << ": "<<endl;
+    if( this->stmt->getKind()== BREAK_ST || CONT_ST){
+        // ss<< this->stmt->genCode(endForLabel) <<endl;
+    }else{
+        ss<< this->stmt->genCode() <<endl;
+    }
+
+    if (this->asignation != NULL){
+        ss<<this->asignation->genCode();
+    }
+
+    ss<< "j " << forLabel <<endl;
+    ss<< endForLabel << ": "<<endl;
     return ss.str();
 }
 
@@ -901,16 +1128,20 @@ string ElseStatement::genCode(){
     this->conditionalExpr->genCode(exprCode);
     stringstream code;
     code << exprCode.code << endl;
-    if(exprCode.type == INT){
+    if(exprCode.type == INT || exprCode.type == BOOL){
         code<< "beqz "<< exprCode.place << ", " << elseLabel <<endl;
     }else{
         code << "bc1f "<< elseLabel <<endl;
     }
     code << this->trueStatement->genCode() << endl
     << "j " <<endIfLabel << endl
-    << elseLabel <<": " <<endl
-    << this->falseStatement->genCode() <<endl
-    << endIfLabel <<" :"<< endl;
+    << elseLabel <<": " <<endl;
+    if(this->falseStatement->getKind()==BLOCK_ST || this->falseStatement->getKind()==CONT_ST){
+        // code<< this->falseStatement->genCode(endIfLabel) <<endl;
+    }else{
+        code<< this->falseStatement->genCode() <<endl;
+    }
+    code<< endIfLabel <<" :"<< endl;
     releaseRegister(exprCode.place);
     return code.str();
 }
@@ -932,7 +1163,7 @@ string IfStatement::genCode(){
     this->conditionalExpr->genCode(exprCode);
     stringstream code;
     code << exprCode.code << endl;
-    if(exprCode.type == INT){
+    if(exprCode.type == INT || exprCode.type == BOOL){
         code<< "beqz "<< exprCode.place << ", " << endIfLabel <<endl;
     }else{
         code << "bc1f "<< endIfLabel <<endl;
@@ -961,15 +1192,14 @@ int ReturnStatement::evaluateSemantic(){
 string ReturnStatement::genCode(){
     Code exprCode;
     this->expr->genCode(exprCode);
-    if(this->expr->getType() == INT){
-        releaseRegister(exprCode.place);
-    }else{
-        releaseRegister(exprCode.place);
-    }
-
     stringstream ss;
-    ss << exprCode.code << endl
-    << "move $v0, "<< exprCode.place <<endl;
+    if(exprCode.type != FLOAT){
+        ss << exprCode.code << endl
+        << "move $v0, "<< exprCode.place <<endl;
+    }else{
+        ss << exprCode.code << endl
+        << "move $v0, "<< exprCode.place <<endl;
+    }    
     return ss.str();
 }
 

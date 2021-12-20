@@ -6,8 +6,10 @@
 //http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf
     #include <cstdio>
     #include "ast.h"
+    #include "asm.h"
     #include <string>
     #include <iostream>
+    #include <fstream>
     using namespace std;
     int yylex();
     extern int yylineno;
@@ -24,6 +26,17 @@
     #define TRANEQUAL 5
     #define PORCEQUAL 6
     #define SLASHEQUAL 7
+
+    Asm assemblyFile;
+
+    void writeFile(string name){
+        ofstream file;
+        file.open(name);
+        file << assemblyFile.data << endl
+        << assemblyFile.global <<endl
+        << assemblyFile.text << endl;
+        file.close();
+    }
 %}
 
 
@@ -99,11 +112,18 @@
 %%
 
 input:start {
+    assemblyFile.global = ".globl main";
+    assemblyFile.data = ".data\n";
+    assemblyFile.text = ".text\n";
     list<Statement *>::iterator it = $1->begin();
+    string code;
     while(it != $1->end()){
         printf("semantic result: %d \n",(*it)->evaluateSemantic());
+        code += (*it)->genCode();
         it++;
     }
+    assemblyFile.text += code;
+    writeFile("result.s");
 }
 
 start: PACK_TK MAIN_TK import_loop body { cout<<"start"<<endl; $$= $4;}
@@ -258,8 +278,8 @@ methodcall: ID_TK '.' ID_TK '('')'{ $$ = new MethodInvocationExpr(new IdExpr(*$3
 expression_list: expression_list ',' expression {$$ = $1; $$->push_back($3);}
     | expression { $$ = new ExpressionList; $$->push_back($1);}
 
-if_statement: IF_TK expression block_statements {$$ = new IfStatement($2, $3, yylineno);}
-    | IF_TK expression block_statements ELSE_TK statement {$$ = new ElseStatement($2, $3, $5, yylineno);}
+if_statement: IF_TK expression block_statements {$$ = new IfStatement($2, (BlockStatement*)$3, yylineno);}
+    | IF_TK expression block_statements ELSE_TK statement {$$ = new ElseStatement($2, (BlockStatement*)$3, $5, yylineno);}
     ;
 
 block_statements: '{' statement_list '}' { DeclarationList * list = new DeclarationList();
