@@ -100,7 +100,7 @@
 %token PRINT_TK
 
 %type<statement_list_t> statement_list input start body
-%type<statement_t> block_statements  statement external_declaration
+%type<statement_t> block_statements  statement external_declaration print_statement
 %type<declarator_t>declaration_statement 
 %type<declarator_list_t>declaration_list
 %type<parameter_list_t> param_list
@@ -223,13 +223,18 @@ statement: expression_statement {$$ = $1;}  //ya
     | jump_statement {$$ = $1;} // ya
     | FOR_TK for_statement {$$ = $2;} // cambiarlo pq este era while en el del inge
     | block_statements {$$ = $1;} //ya
+    | print_statement { $$=$1; }
     ;
 
-declaration_statement: VAR_TK ID_TK type ';' { $$ = new Declarator((Type)$3, *$2, NULL, false, yylineno);}
-    | VAR_TK ID_TK type '=' expression ';'{  cout<<"2"<<*$2<<yylineno<<endl; $$ = new Declarator( (Type)$3, *$2, new Initializer($5,yylineno), false, yylineno);}
-    | VAR_TK ID_TK '=' expression ';'{  $$ = new Declarator( $4->getType(), *$2, new Initializer($4,yylineno), false, yylineno);}
-    // | VAR_TK ID_TK '['']' '=' expression ';'
-    | ID_TK COLON_EQUAL_TK expression ';' { cout<<"4"<<*$1<<yylineno<<endl; $$ = new Declarator( $3->getType(),*$1 , new Initializer($3,yylineno), false, yylineno);}
+    
+print_statement: PRINT_TK expression { $$=new Print($2,yylineno); }
+
+declaration_statement: VAR_TK ID_TK type ';' { $$ = new Declarator((Type)$3, *$2, NULL, false, 0,yylineno);}
+    | VAR_TK ID_TK type '=' expression ';'{   $$ = new Declarator( (Type)$3, *$2, new Initializer($5,yylineno), false, 0,yylineno);}
+    | VAR_TK ID_TK '=' expression ';'{  $$ = new Declarator( $4->getType(), *$2, new Initializer($4,yylineno), false,0, yylineno);}
+    // | VAR_TK ID_TK '[' LIT_INT_TK ']' type ';' {$$ = new Declarator((Type)$5, *$2, NULL, true, $4, yylineno);}
+    // | VAR_TK ID_TK '[' LIT_INT_TK ']' type '=' expression ';'{$$ = new Declarator((Type)$5, *$2, new Initializer($8,yylineno), true, $4, yylineno);}
+    | ID_TK COLON_EQUAL_TK expression ';' { $$ = new Declarator( $3->getType(),*$1 , new Initializer($3,yylineno), false, 0,yylineno);}
     ;
 
 expression_statement: methodcall { $$ = new ExprStatement($1, yylineno);}
@@ -272,7 +277,6 @@ methodcall: ID_TK '.' ID_TK '('')'{ $$ = new MethodInvocationExpr(new IdExpr(*$3
     | ID_TK '.' ID_TK '(' expression_list ')' { $$ = new MethodInvocationExpr(new IdExpr(*$3,yylineno), *$5, yylineno); }
     | ID_TK '(' expression_list ')'{ $$ = new MethodInvocationExpr(new IdExpr(*$1,yylineno), *$3, yylineno); }
     | ID_TK '('')'{ $$ = new MethodInvocationExpr(new IdExpr(*$1,yylineno), *(new ExpressionList), yylineno); }
-    | PRINT_TK '(' expression_list ')' { $$=new Print(*$3,yylineno); }
     ;
 
 expression_list: expression_list ',' expression {$$ = $1; $$->push_back($3);}
@@ -303,8 +307,8 @@ param_list: param_list ',' param {$$ = $1; $$->push_back($3);}
     | param { $$ = new ParameterList; $$->push_back($1); }
     ;
 
-param: ID_TK type { $$ = new Parameter((Type)$2, new Declarator((Type)$2,*$1,NULL,false, yylineno), false, yylineno); }
-    //| ID_TK '[' ']' type { Declarator* cos= new Declarator((Type)$4,$1,NULL,true , yylineno); $$ = new Parameter((Type)$4, cos, true, yylineno); }
+param: ID_TK type { $$ = new Parameter((Type)$2, new Declarator((Type)$2,*$1,NULL,false,0, yylineno), false, yylineno); }
+    //| ID_TK '[' LIT_INT_TK ']' type { Declarator* cos= new Declarator((Type)$4,$1,NULL,true , yylineno); $$ = new Parameter((Type)$4, cos, true,0, yylineno); }
 
 expression: expression AND_TK unary_expression { $$ = new LogicalAndExpr($1, $3, yylineno); }
     | expression OR_TK unary_expression { $$ = new LogicalOrExpr($1, $3, yylineno); }
@@ -337,16 +341,15 @@ multiplicative_expression: multiplicative_expression '*' primary_expression { $$
 
 primary_expression: '('expression ')' {$$ = $2;}    
     | ID_TK {$$ = new IdExpr(*$1, yylineno);}   //gya
-    //| ID_TK '[' expression ']' 
     | LIT_STRING_TK { $$ = new StringExpr(*$1 , yylineno);}
     | LIT_INT_TK { $$ = new IntExpr($1 , yylineno);}    //gya
     | LIT_FLOAT_TK { $$ = new FloatExpr($1 , yylineno);}    //gya
     | TRUE_TK { $$ = new BoolExpr( 1, yylineno);}   // gya
     | FALSE_TK { $$ = new BoolExpr( 0, yylineno);} // gya
-    //| '['']' type '{' expression_list '}' ';' 
+    //| ID_TK '{' expression_list '}' { $$ = new ArrayExpr(new IdExpr(*$1, yylineno),*$2,yylineno)}
+    //|
     | methodcall { $$ = $1;}
     ;
-
 
 assignment_operator: '=' { $$ = EQUAL; }
     | PLUS_EQUAL_TK { $$ = PLUSEQUAL; }

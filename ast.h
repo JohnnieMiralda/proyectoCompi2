@@ -38,7 +38,7 @@ enum StatementKind{
     EXPRESSION_ST,
     ASSIGNATION_ST,
     BLOCK_ST,
-
+    PRINT_ST,
     RETURN_ST,
     BREAK_ST,
     CONT_ST,
@@ -114,16 +114,19 @@ class BlockStatement : public Statement{
             return BLOCK_ST;
         }
 };
-class Print: public Expr{
+class Print: public Statement{
     public:
-        Print(ExpressionList args, int line){
+        Print(Expr* args, int line){
             this->args= args;
             this->line= line;
         }
-        ExpressionList args;
+        Expr* args;
         int line;
-        Type getType();
-        void genCode(Code &code);
+        string genCode();
+        int evaluateSemantic();
+        StatementKind getKind(){
+            return PRINT_ST;
+        }
 };
 
 class BreakStatement: public Statement{
@@ -189,17 +192,19 @@ class Initializer{
 
 class Declarator{
     public:
-        Declarator(Type type, string id, Initializer * initializer, bool isArray, int line){
+        Declarator(Type type, string id, Initializer * initializer, bool isArray,int sizeArray, int line){
             this-> type = type;
             this-> id = id;
             this-> initializer = initializer;
             this-> isArray = isArray;
+            this->sizeArray = sizeArray;
             this-> line = line;
 	    }
         Type type;
         string id;
         Initializer * initializer;
         bool isArray;
+        int sizeArray;
         int line;
         int evaluateSemantic();
         string genCode();
@@ -332,13 +337,13 @@ class MethodInvocationExpr : public Expr{
 
 class ArrayExpr : public Expr{
     public:
-        ArrayExpr(IdExpr * id, Expr * expr, int line){
+        ArrayExpr(IdExpr * id, ExpressionList expr, int line){
             this->id = id;
             this->expr = expr;
             this->line = line;
         }
         IdExpr * id;
-        Expr * expr;
+        ExpressionList expr;
         int line;
         Type getType();
         void genCode(Code &code);

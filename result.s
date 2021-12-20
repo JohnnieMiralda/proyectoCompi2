@@ -1,4 +1,5 @@
 .data
+string0: .asciiz"a = "
 
 .globl main
 .text
@@ -7,57 +8,37 @@ addiu $sp, $sp, -12
 
 sw $ra, 0($sp)
 
-li $t0, 5
+li $t0, 1
 
  sw $t0 , 4($sp)
 
-li $t0, 8
+li $t0, 3
 
  sw $t0 , 8($sp)
 
 lw $t0, 4($sp)
 
-li $t1, 2
+addi $t0 , $t0 , 1 
+sw $t0,4($sp)
 
-div $t0, $t1
-mfhi $t0
+lw $t0, 4($sp)
 
-li $t1, 0
+li $t1, 1
 
-beq $t0, $t1, label2
-addi $t0, $zero, 0
- j finalLabel3
-label2:
-addi $t0, $zero, 1
-finalLabel3:
+add $t0, $t0, $t1
 
-beqz $t0, else0
+sw $t0 , 4($sp)
 
 
-j endif1
-else0: 
-endif1 :
+la $a0, string0
+li $v0, 4
+syscall
 
-lw $t0, 8($sp)
+lw $t0, 4($sp)
 
-li $t1, 4
-
-div $t0, $t1
-mfhi $t0
-
-li $t1, 0
-
-beq $t0, $t1, label5
-addi $t0, $zero, 0
- j finalLabel6
-label5:
-addi $t0, $zero, 1
-finalLabel6:
-
-beqz $t0, endif4
-
-
-endif4 :
+move $a0, $t0
+li $v0, 1
+syscall
 
 lw $ra, 0($sp)
 addiu $sp, $sp, 12

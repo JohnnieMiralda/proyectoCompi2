@@ -2,9 +2,10 @@
 #include <iostream>
 #include <sstream>
 #include <set>
-// #include "asm.h"
+#include "asm.h"
+#include <stack>
 
-// extern Asm assemblyFile;
+extern Asm assemblyFile;
 
 int globalStackPointer = 0;
 
@@ -24,6 +25,8 @@ class VariableInfo{
 
 map<string, VariableInfo *> codeGenerationVars;
 map<string, bool> initilizedVariables;
+stack<string> breakContinueLabel;
+
 
 class ContextStack{
     public:
@@ -200,17 +203,22 @@ int ContinueStatement::evaluateSemantic(){
 
 string ContinueStatement::genCode(){
     stringstream ss;
-    // ss<<"j "<<label;
+    // string coso= breakContinueLabel.top();
+    ss<<"j continue "<< breakContinueLabel.top()<<endl;
+    breakContinueLabel.pop();
     return ss.str();
 }
 
 int BreakStatement::evaluateSemantic(){
+
     return 0;
 }
 
 string BreakStatement::genCode(){
     stringstream ss;
-    // ss<<"j "<<label;
+    // string coso= breakContinueLabel.top();
+    ss<<"j break "<< breakContinueLabel.top()<<endl;
+    breakContinueLabel.pop();
     return ss.str();
 }
 
@@ -233,11 +241,7 @@ string BlockStatement::genCode(){
     {
         Statement * stmt = *its;
         if(stmt != NULL){
-            if(stmt->getKind()== BREAK_ST || stmt->getKind()== CONT_ST){
-                // ss<<stmt->genCode(label)<<endl;
-            }else{
-                ss<<stmt->genCode()<<endl;
-            }
+            ss<<stmt->genCode()<<endl;
         }
 
         its++;
@@ -255,12 +259,30 @@ void addMethodDeclaration(string id, int line, Type type, ParameterList params){
     methods[id]->parameters = params;
 }
 
-Type Print::getType(){
-    return VOID;
+int Print::evaluateSemantic(){
+    return this->args->getType();
 }
 
-void Print::genCode(Code &code){
-
+string Print::genCode(){
+    Code exprCode;
+    this->args->genCode(exprCode);
+    releaseRegister(exprCode.place);
+    stringstream code;
+    code<< exprCode.code<<endl;
+    if(exprCode.type == INT){
+        code <<"move $a0, "<< exprCode.place<<endl
+        << "li $v0, 1"<<endl
+        << "syscall"<<endl;
+    }else if(exprCode.type == FLOAT){
+        code << "mov.s $f12, "<< exprCode.place<<endl
+        << "li $v0, 2"<<endl
+        << "syscall"<<endl;
+    }else if(exprCode.type == STRING){
+        code << "la $a0, "<< exprCode.place<<endl
+        << "li $v0, 4"<<endl
+        << "syscall"<<endl;
+    }
+    return code.str();
 }
 
 int MethodDefinition::evaluateSemantic(){
@@ -367,11 +389,7 @@ string MethodDefinition::genCode(){
     {
         Statement * stmt = *its;
         if(stmt != NULL){
-            if(stmt->getKind()== BREAK_ST || stmt->getKind()== CONT_ST){
-                // ss<<stmt->genCode(label)<<endl;
-            }else{
-                code<<stmt->genCode()<<endl;
-            }
+            code<<stmt->genCode()<<endl;
         }
 
         its++;
@@ -604,7 +622,7 @@ void ArrayExpr::genCode(Code &code){
     Code arrayCode;
     string name = this->id->id;
     stringstream ss;
-    this->expr->genCode(arrayCode);
+    // this->expr->genCode(arrayCode);
     //a[1]
     if (codeGenerationVars.find(name) == codeGenerationVars.end())
     {
@@ -780,19 +798,16 @@ Type PostIncrementExpr::getType(){
 string PostIncrementExpr::genCode(){
     stringstream ss;
     // this->expr->evaluateSemantic();
-    Type exprType = this->expr->getType();
     Code code;
-    if (exprType == INT){
-        this->expr->genCode(code);
-        ss<<code.code<<endl;
+    this->expr->genCode(code);
+    ss<<code.code<<endl;
+    if (code.type == INT){
         ss<<"addi "<< code.place <<" , "<< code.place << " , 1 "<<endl;
         ss<<"sw "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
         releaseRegister(code.place);
         return ss.str();
     }else{
-        this->expr->genCode(code);
         string floattemp= getFloatTemp();
-        ss<<code.code<<endl;
         ss<< "li.s" << floattemp <<" , 1.0"<<endl;
         ss<<"add.s "<< code.place <<" , "<< code.place << " , "<<  floattemp <<endl;
         ss<<"s.s "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
@@ -800,7 +815,7 @@ string PostIncrementExpr::genCode(){
         releaseRegister(floattemp);
         return ss.str();
     }
-    return "";
+    return ss.str();
 }
 
 int PostIncrementExpr::evaluateSemantic(){
@@ -827,25 +842,23 @@ Type PostDecrementExpr::getType(){
 string PostDecrementExpr::genCode(){
     stringstream ss;
     // this->expr->evaluateSemantic();
-    Type exprType = this->expr->getType();
     Code code;
-    if (exprType == INT){
-        this->expr->genCode(code);
-        ss<<code.code<<endl;
+    ss<<code.code<<endl;
+
+    if (code.type == INT){
         ss<<"addi "<< code.place <<" , "<< code.place << " , -1 "<<endl;
         ss<<"sw "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
         releaseRegister(code.place);
     }else{
         this->expr->genCode(code);
         string floattemp= getFloatTemp();
-        ss<<code.code<<endl;
         ss<< "li.s" << floattemp <<" , 1.0"<<endl;
         ss<<"sub.s "<< code.place <<" , "<< code.place << " , "<<  floattemp <<endl;
         ss<<"s.s "<< code.place << "," << to_string(codeGenerationVars[this->expr->id]->offset) << "($sp)"<<endl;
         releaseRegister(code.place);
         releaseRegister(floattemp);
     }
-    return "";
+    return ss.str();
 }
 
 Type StringExpr::getType(){
@@ -856,7 +869,7 @@ void StringExpr::genCode(Code &code){
     string strLabel = getNewLabel("string");
     stringstream ss;
     ss << strLabel <<": .asciiz" << this->value << ""<<endl;
-    // assemblyFile.data += ss.str(); 
+    assemblyFile.data += ss.str(); 
     code.code = "";
     code.place = strLabel;
     code.type = STRING;
@@ -929,6 +942,12 @@ string Declarator::genCode(){
 
 int ForStatement::evaluateSemantic(){
     
+    if(this->decl != NULL){
+        this->decl->evaluateSemantic();
+    }
+
+    pushContext();
+
     if(this->asignation != NULL){
         this->asignation->evaluateSemantic();
     }
@@ -939,17 +958,45 @@ int ForStatement::evaluateSemantic(){
             exit(0);
         }
     }
-    
 
-    pushContext();
-    if(this->decl != NULL){
-        this->decl->evaluateSemantic();
-    }
     if(this->stmt != NULL){
         this->stmt->evaluateSemantic();
     }
     popContext();
     return 0;
+}
+
+string ForStatement::genCode(){
+    stringstream ss;
+    string forLabel = getNewLabel("for");
+    string endForLabel = getNewLabel("endFor");
+    string asignForLabel = getNewLabel("asignFor");
+    Code code;
+
+    if (this->decl != NULL){
+        ss<<this->decl->genCode();
+    }
+
+    this->expr->genCode(code);
+    ss << forLabel << ": "<< endl
+    << code.code <<endl;
+    if(code.type == INT || code.type == BOOL){
+        ss<< "beqz "<< code.place << ", " << endForLabel <<endl;
+    }else{
+        ss << "bc1f "<< endForLabel <<endl;
+    }
+    breakContinueLabel.push(endForLabel);
+
+    ss<< this->stmt->genCode() <<endl;
+
+    if (this->asignation != NULL){
+        ss<<asignForLabel<<endl;
+        ss<<this->asignation->genCode();
+    }
+
+    ss<< "j " << forLabel <<endl;
+    ss<< endForLabel << ": "<<endl;
+    return ss.str();
 }
 
 int AsignationStatement::evaluateSemantic(){
@@ -1087,38 +1134,7 @@ string AsignationStatement::genCode(){
     return ss.str();
 }
 
-string ForStatement::genCode(){
-    stringstream ss;
-    string forLabel = getNewLabel("for");
-    string endForLabel = getNewLabel("endFor");
-    Code code;
 
-    if (this->decl != NULL){
-        ss<<this->decl->genCode();
-    }
-
-    this->expr->genCode(code);
-    ss << forLabel << ": "<< endl
-    << code.code <<endl;
-    if(code.type == INT || code.type == BOOL){
-        ss<< "beqz "<< code.place << ", " << endForLabel <<endl;
-    }else{
-        ss << "bc1f "<< endForLabel <<endl;
-    }
-    if( this->stmt->getKind()== BREAK_ST || CONT_ST){
-        // ss<< this->stmt->genCode(endForLabel) <<endl;
-    }else{
-        ss<< this->stmt->genCode() <<endl;
-    }
-
-    if (this->asignation != NULL){
-        ss<<this->asignation->genCode();
-    }
-
-    ss<< "j " << forLabel <<endl;
-    ss<< endForLabel << ": "<<endl;
-    return ss.str();
-}
 
 int ElseStatement::evaluateSemantic(){
     if(this->conditionalExpr->getType() != BOOL){
@@ -1139,6 +1155,7 @@ string ElseStatement::genCode(){
     string elseLabel = getNewLabel("else");
     string endIfLabel = getNewLabel("endif");
     Code exprCode;
+    breakContinueLabel.push(endIfLabel);
     this->conditionalExpr->genCode(exprCode);
     stringstream code;
     code << exprCode.code << endl;
@@ -1150,11 +1167,8 @@ string ElseStatement::genCode(){
     code << this->trueStatement->genCode() << endl
     << "j " <<endIfLabel << endl
     << elseLabel <<": " <<endl;
-    if(this->falseStatement->getKind()==BLOCK_ST || this->falseStatement->getKind()==CONT_ST){
-        // code<< this->falseStatement->genCode(endIfLabel) <<endl;
-    }else{
-        code<< this->falseStatement->genCode() <<endl;
-    }
+
+    code<< this->falseStatement->genCode() <<endl;
     code<< endIfLabel <<" :"<< endl;
     releaseRegister(exprCode.place);
     return code.str();
@@ -1182,6 +1196,7 @@ string IfStatement::genCode(){
     }else{
         code << "bc1f "<< endIfLabel <<endl;
     }
+    breakContinueLabel.push(endIfLabel);
     code<< this->trueStatement->genCode() << endl
     << endIfLabel <<" :"<< endl;
     releaseRegister(exprCode.place);
@@ -1212,35 +1227,11 @@ string ReturnStatement::genCode(){
         << "move $v0, "<< exprCode.place <<endl;
     }else{
         ss << exprCode.code << endl
-        << "move $v0, "<< exprCode.place <<endl;
+        << "move.s $v0, "<< exprCode.place <<endl;
     }    
     return ss.str();
 }
 
-// int PrintStatement::evaluateSemantic(){
-//     return this->expr->getType();
-// }
-
-// string PrintStatement::genCode(){
-//     Code exprCode;
-//     this->expr->genCode(exprCode);
-//     stringstream code;
-//     code<< exprCode.code<<endl;
-//     if(exprCode.type == INT){
-//         code <<"move $a0, "<< exprCode.place<<endl
-//         << "li $v0, 1"<<endl
-//         << "syscall"<<endl;
-//     }else if(exprCode.type == FLOAT){
-//         code << "mov.s $f12, "<< exprCode.place<<endl
-//         << "li $v0, 2"<<endl
-//         << "syscall"<<endl;
-//     }else if(exprCode.type == STRING){
-//         code << "la $a0, "<< exprCode.place<<endl
-//         << "li $v0, 4"<<endl
-//         << "syscall"<<endl;
-//     }
-//     return code.str();
-// }
 
 void EqExpr::genCode(Code &code){
     Code leftSideCode; 
