@@ -49,6 +49,7 @@ map<string, Type> resultTypes ={
     {"FLOAT,FLOAT", FLOAT},
     {"INT,FLOAT", FLOAT},
     {"FLOAT,INT", FLOAT},
+    {"BOOL,BOOL", BOOL},
 };
 
 const char * intTemps[] = {"$t0","$t1", "$t2","$t3","$t4","$t5","$t6","$t7","$t8","$t9" };
@@ -204,7 +205,7 @@ int ContinueStatement::evaluateSemantic(){
 string ContinueStatement::genCode(){
     stringstream ss;
     // string coso= breakContinueLabel.top();
-    ss<<"j continue "<< breakContinueLabel.top()<<endl;
+    ss<<"j "<< breakContinueLabel.top()<<endl;
     breakContinueLabel.pop();
     return ss.str();
 }
@@ -217,7 +218,7 @@ int BreakStatement::evaluateSemantic(){
 string BreakStatement::genCode(){
     stringstream ss;
     // string coso= breakContinueLabel.top();
-    ss<<"j break "<< breakContinueLabel.top()<<endl;
+    ss<<"j "<< breakContinueLabel.top()<<endl;
     breakContinueLabel.pop();
     return ss.str();
 }
@@ -615,57 +616,78 @@ void UnaryExpr::genCode(Code &code){
 }
 
 Type ArrayExpr::getType(){
+    int cont=0;
+    Type idtype=this->id->getType();
+
+    list<Expr *>::iterator argsIt =this->expr.begin();
+    while(argsIt != this->expr.end()){
+        Expr * id= *argsIt;
+        if(id->getType()!= idtype){
+            cout<<"error: Array "<<this->id<<" expression type does not match array type line: "<<this->line<<endl;
+            exit(0);
+        }
+        argsIt++;
+    }
+
+
     return this->id->getType();
 }
 
 void ArrayExpr::genCode(Code &code){
-    Code arrayCode;
-    string name = this->id->id;
+    Code arraycode;
     stringstream ss;
-    // this->expr->genCode(arrayCode);
-    //a[1]
-    if (codeGenerationVars.find(name) == codeGenerationVars.end())
-    {
-        string temp = getIntTemp();
-        string labelAddress = getIntTemp();
-        ss << arrayCode.code<<endl
-        << "li $a0, 4"<<endl
-        << "mult $a0, "<< arrayCode.place<<endl
-        <<"mflo "<<temp<<endl
-        << "la "<< labelAddress<<", "<< name<<endl
-        << "add "<<temp<<", "<<labelAddress<<", "<<temp<<endl;
-        releaseRegister(arrayCode.place);
-        releaseRegister(labelAddress);
-        if(globalVariables[name] == INT_ARRAY){
-           ss <<"lw "<< temp<<", 0("<<temp<<")"<<endl;
-           code.place = temp;
-        }else{
-            string floatTemp = getFloatTemp();
-            ss <<"l.s "<< floatTemp<<", 0("<<temp<<")"<<endl;
-           code.place = floatTemp;
-        }
-    }else{
-        string temp = getIntTemp();
-        string address = getIntTemp();
-        ss << arrayCode.code<<endl
-        << "li $a0, 4"<<endl
-        << "mult $a0, "<< arrayCode.place<<endl
-        <<"mflo "<<temp<<endl
-        << "la "<<address<<", "<<codeGenerationVars[name]->offset<<"($sp)"<<endl
-        << "add "<<temp<<", "<<address<<", "<<temp<<endl;
-        if(codeGenerationVars[name]->type == INT_ARRAY){
-           ss <<"lw "<< temp<<", 0("<<temp<<")"<<endl;
-           code.place = temp;
-           code.type = INT;
-        }else{
-            string floatTemp = getFloatTemp();
-            ss <<"l.s "<< floatTemp<<", 0("<<temp<<")"<<endl;
-           code.place = floatTemp;
-           code.type = FLOAT;
-        }
-    }
-    code.code = ss.str();
+
 }
+
+
+// void ArrayExpr::genCode(Code &code){
+//     Code arrayCode;
+//     string name = this->id->id;
+//     stringstream ss;
+//     // this->expr->genCode(arrayCode);
+//     //a[1]
+//     if (codeGenerationVars.find(name) == codeGenerationVars.end())
+//     {
+//         string temp = getIntTemp();
+//         string labelAddress = getIntTemp();
+//         ss << arrayCode.code<<endl
+//         << "li $a0, 4"<<endl
+//         << "mult $a0, "<< arrayCode.place<<endl
+//         <<"mflo "<<temp<<endl
+//         << "la "<< labelAddress<<", "<< name<<endl
+//         << "add "<<temp<<", "<<labelAddress<<", "<<temp<<endl;
+//         releaseRegister(arrayCode.place);
+//         releaseRegister(labelAddress);
+//         if(globalVariables[name] == INT_ARRAY){
+//            ss <<"lw "<< temp<<", 0("<<temp<<")"<<endl;
+//            code.place = temp;
+//         }else{
+//             string floatTemp = getFloatTemp();
+//             ss <<"l.s "<< floatTemp<<", 0("<<temp<<")"<<endl;
+//            code.place = floatTemp;
+//         }
+//     }else{
+//         string temp = getIntTemp();
+//         string address = getIntTemp();
+//         ss << arrayCode.code<<endl
+//         << "li $a0, 4"<<endl
+//         << "mult $a0, "<< arrayCode.place<<endl
+//         <<"mflo "<<temp<<endl
+//         << "la "<<address<<", "<<codeGenerationVars[name]->offset<<"($sp)"<<endl
+//         << "add "<<temp<<", "<<address<<", "<<temp<<endl;
+//         if(codeGenerationVars[name]->type == INT_ARRAY){
+//            ss <<"lw "<< temp<<", 0("<<temp<<")"<<endl;
+//            code.place = temp;
+//            code.type = INT;
+//         }else{
+//             string floatTemp = getFloatTemp();
+//             ss <<"l.s "<< floatTemp<<", 0("<<temp<<")"<<endl;
+//            code.place = floatTemp;
+//            code.type = FLOAT;
+//         }
+//     }
+//     code.code = ss.str();
+// }
 
 Type IdExpr::getType(){
     Type value;
@@ -923,7 +945,7 @@ string Declarator::genCode(){
             globalStackPointer+=4;
             if(this->type != FLOAT){
                 string tempint= getIntTemp();
-                ss<< "li " << tempint << " , $zero" <<endl;
+                ss<< "li " << tempint << " , 0" <<endl;
                 ss<<" sw "<< tempint << " , " << codeGenerationVars[this->id]->offset << "($sp)"<<endl;
                 releaseRegister(tempint);
             }
@@ -990,7 +1012,7 @@ string ForStatement::genCode(){
     ss<< this->stmt->genCode() <<endl;
 
     if (this->asignation != NULL){
-        ss<<asignForLabel<<endl;
+        ss<<asignForLabel<<":" <<endl;
         ss<<this->asignation->genCode();
     }
 
@@ -1221,14 +1243,18 @@ int ReturnStatement::evaluateSemantic(){
 string ReturnStatement::genCode(){
     Code exprCode;
     this->expr->genCode(exprCode);
+    string tmpInt= getIntTemp();
     stringstream ss;
     if(exprCode.type != FLOAT){
         ss << exprCode.code << endl
         << "move $v0, "<< exprCode.place <<endl;
     }else{
         ss << exprCode.code << endl
-        << "move.s $v0, "<< exprCode.place <<endl;
+        << "mfc1 "<< tmpInt <<" , "<< exprCode.place <<endl;
+        ss<< "move $v0, "<< tmpInt <<endl;
     }    
+    releaseRegister(tmpInt);
+    releaseRegister(exprCode.place);
     return ss.str();
 }
 

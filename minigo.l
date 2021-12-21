@@ -97,6 +97,7 @@
 
 
 [\n]+ {}
+[ ] {}
 . ;
 <CommentBlock>"*/" {BEGIN(INITIAL);}
 <CommentBlock>.|\n {  }

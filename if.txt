@@ -3,6 +3,11 @@ package main
 import "lol"
 
 
+func coso( coso float)float{
+    var ret float= 1.1;
+    return coso + ret
+}
+
 func main () {
 
      /*
@@ -10,15 +15,20 @@ func main () {
     */
     var a int = 5;
     var b = 8;
+    cos:= 9.5;
+    var cosos float= coso(cos);
+    fmt.Println(" \n hahah ")
+
+    fmt.Println(cosos)
     a++
     if a % 2 == 0 {
-        fmt.Println("a is even")
+        fmt.Println(" \na is even")
     } else {
-        fmt.Println("a is odd")
+        fmt.Println(" \na is odd")
     }
 
     if b%4 == 0 {
-        fmt.Println("8 is divisible by 4")
+        fmt.Println(" \n8 is divisible by 4")
         continue
     }
    

@@ -16,20 +16,36 @@ func main() {
     //b:= rand.Float32() * 100
     var a int =1;
     var b =3;
-    a++
-    a= a+1
-    fmt.Println("a = ")
+    c:=3;
+    var lol bool;
+    fmt.Println(" \na = ")
     fmt.Println(a)
-    //fmt.Println("b = ", b)
-    //fmt.Println("a+b = ", (a&&b))
-    //fmt.Println("a-b = ",(a-b))
-    //fmt.Println("a*b = ",(a*b))	
-    //fmt.Println("a/b = ",(a/b))
-    ////fmt.Println("a%b = ",(a%b))
-    //fmt.Println("a>b = ",(a>b))
-    //fmt.Println("a<b = ",(a<b))
-    //fmt.Println("a>=b = ", (a>=b))
-    //fmt.Println("a<=b = ", (a<=b))
-    //fmt.Println("true&&true = ", (true && false))
+    fmt.Println(" \nb = ")
+    fmt.Println(b)
+    fmt.Println(" \na+b = ")
+    fmt.Println((a+b))
+    fmt.Println(" \na-b = ")
+    fmt.Println((a-b))
+    fmt.Println(" \na*b = ")
+    fmt.Println((a*b))	
+    fmt.Println(" \na/b = ")
+    fmt.Println((b/a))
+    fmt.Println(" \n b%a = ")
+    fmt.Println((b%a))
+    fmt.Println(" \na>b = ")
+    fmt.Println((a>b))
+    fmt.Println(" \na<b = ")
+    fmt.Println((a<b))
+    fmt.Println(" \na>=b = ")
+    fmt.Println( (a>=b))
+    fmt.Println(" \na<=b = ")
+    fmt.Println( (a<=b))
+    fmt.Println(" \nc==b = ")
+    fmt.Println( (c==b))
+    fmt.Println(" \na==b = ")
+    fmt.Println( (a==b))
+    fmt.Println(" \ntrue&&true = ") 
+    lol= (true && true)
+    fmt.Println( lol)
     
 }
